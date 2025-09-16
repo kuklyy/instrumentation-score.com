@@ -54,7 +54,6 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
           id={rule.id}
           checked={isEnabled}
           onCheckedChange={() => onToggleRule(rule.id)}
-          className="data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
         />
 
         {/* Rule Info */}

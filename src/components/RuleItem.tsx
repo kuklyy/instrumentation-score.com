@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InfoIcon } from 'lucide-react';
 import { Rule } from '@/data/sampleRules';
 
@@ -40,10 +40,9 @@ export const RuleItem: React.FC<RuleItemProps> = ({ rule, onToggle }) => {
       </div>
 
       <div className="ml-4">
-        <Switch
+        <Checkbox
           checked={rule.enabled}
           onCheckedChange={() => onToggle(rule.id)}
-          className="data-[state=checked]:bg-primary"
         />
       </div>
     </div>

@@ -10,6 +10,11 @@
   },
   "keywords": ["opentelemetry", "instrumentation", "observability", "scoring", "otlp"],
   "type": "module",
+  "main": "./src/lib/score-drilldown/index.ts",
+  "exports": {
+    ".": "./src/lib/score-drilldown/index.ts",
+    "./src/lib/score-drilldown": "./src/lib/score-drilldown/index.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
