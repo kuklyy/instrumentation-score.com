@@ -19,10 +19,6 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
     low: "bg-slate-500"
   };
 
-  const getBreakdownPercentage = (priority: Priority) => {
-    const { points } = score.breakdown[priority];
-    return score.maxScore > 0 ? (points / score.maxScore) * 100 : 0;
-  };
 
   return (
     <Card className="bg-slate-800 border-slate-700">
@@ -35,7 +31,7 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
           </div>
         </div>
         <CardDescription className="text-slate-300">
-          with {enabledCount}/{totalCount} rules enabled
+          Instrumentation Score
         </CardDescription>
       </CardHeader>
 
@@ -47,7 +43,7 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
             <span className="text-3xl text-slate-400 ml-2">/ 100</span>
           </div>
           <div className="text-sm text-slate-400">
-            {score.raw.toFixed(1)} / {score.maxScore.toFixed(1)} points
+            with {enabledCount}/{totalCount} rules enabled
           </div>
         </div>
 
@@ -66,7 +62,6 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
           <h4 className="text-sm font-medium text-slate-300">Impact by Priority</h4>
           <div className="space-y-2">
             {Object.entries(score.breakdown).map(([priority, data]) => {
-              const percentage = getBreakdownPercentage(priority as Priority);
               const priorityKey = priority as Priority;
 
               return (
@@ -90,7 +85,7 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
                   <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className={`absolute left-0 top-0 h-full ${priorityColors[priorityKey]} transition-all duration-300`}
-                      style={{ width: `${percentage}%` }}
+                      style={{ width: `${(data.points / score.maxScore) * 100}%` }}
                     />
                   </div>
                 </div>

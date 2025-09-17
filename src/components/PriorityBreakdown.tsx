@@ -10,34 +10,40 @@ interface PriorityData {
 }
 
 interface PriorityBreakdownProps {
-  data: PriorityData;
+  breakdown: PriorityData;
+  totalCounts?: {
+    critical: number;
+    important: number;
+    normal: number;
+    low: number;
+  };
 }
 
-export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ data }) => {
+export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown, totalCounts }) => {
   const priorityItems = [
     {
       key: 'critical' as keyof PriorityData,
       label: 'Critical',
       variant: 'critical' as const,
-      weight: 'x4'
+      weight: 'x40'
     },
     {
       key: 'important' as keyof PriorityData,
       label: 'Important',
       variant: 'important' as const,
-      weight: 'x2'
+      weight: 'x30'
     },
     {
       key: 'normal' as keyof PriorityData,
       label: 'Normal',
       variant: 'normal' as const,
-      weight: 'x1'
+      weight: 'x20'
     },
     {
       key: 'low' as keyof PriorityData,
       label: 'Low',
       variant: 'low' as const,
-      weight: 'x0.5'
+      weight: 'x10'
     },
   ];
 
@@ -50,7 +56,7 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ data }) =>
 
         <div className="space-y-3">
           {priorityItems.map(({ key, label, variant, weight }) => {
-            const item = data[key];
+            const item = breakdown[key];
             return (
               <div key={key} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -58,7 +64,7 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ data }) =>
                     {label}
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    {item.count}/{item.count} rules
+                    {item.count}/{totalCounts?.[key] || item.count} rules
                   </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">

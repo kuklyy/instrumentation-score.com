@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info, Search, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Info, Search, X, ArrowUpDown } from "lucide-react";
 import { type Rule, getRulesBySignal, getRulesByGroup, type Priority } from "@/lib/scoring";
 
 interface RuleTableProps {
@@ -17,9 +18,15 @@ interface RuleTableProps {
   priorityWeights: Record<Priority, number>;
 }
 
+type SortOption = "priority" | "name" | "group";
+type SortOrder = "asc" | "desc";
+
 export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, priorityWeights }: RuleTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [signalFilter, setSignalFilter] = useState<"all" | "traces" | "metrics" | "logs">("all");
+  const [sortBy, setSortBy] = useState<SortOption>("priority");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const rulesBySignal = getRulesBySignal(rules);
 
@@ -30,22 +37,46 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
     low: "bg-slate-500 hover:bg-slate-600"
   };
 
-  const filterRules = (rulesArray: Rule[]) => {
-    return rulesArray.filter(rule => {
+  const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
+
+  const filterAndSortRules = (rulesArray: Rule[]) => {
+    let filtered = rulesArray.filter(rule => {
       const matchesSearch = searchTerm === "" ||
         rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rule.id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesPriority = priorityFilter === "all" || rule.priority === priorityFilter;
+      const matchesSignal = signalFilter === "all" || rule.signal === signalFilter;
 
-      return matchesSearch && matchesPriority;
+      return matchesSearch && matchesPriority && matchesSignal;
     });
+
+    // Sort the filtered rules
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "priority":
+          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "group":
+          comparison = a.group.localeCompare(b.group);
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return filtered;
   };
 
   const RuleRow = ({ rule }: { rule: Rule }) => {
     const magnitude = magnitudes.get(rule.id) || 0;
     const isEnabled = enabledRuleIds.has(rule.id);
-    const points = isEnabled ? priorityWeights[rule.priority] * (rule.max_points || 1) : 0;
+    const scoreContribution = isEnabled ? magnitude : 0;
 
     return (
       <div className="flex items-center gap-4 p-3 border-b border-slate-700 hover:bg-slate-800/50 transition-colors">
@@ -87,10 +118,10 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
         <div className="w-24 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-slate-400">
-              {isEnabled ? `+${points.toFixed(1)}` : "—"}
+              {isEnabled ? `+${scoreContribution.toFixed(1)}` : "—"}
             </span>
             <span className="text-slate-400">
-              {magnitude.toFixed(1)}%
+              {magnitude.toFixed(1)}pts
             </span>
           </div>
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -98,7 +129,7 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
               className={`h-full transition-all duration-300 ${
                 isEnabled ? 'bg-teal-500' : 'bg-slate-600'
               }`}
-              style={{ width: `${magnitude}%` }}
+              style={{ width: `${(magnitude / 90) * 100}%` }}
             />
           </div>
         </div>
@@ -131,7 +162,7 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
   };
 
   const SignalTab = ({ signal, rules: signalRules }: { signal: string; rules: Rule[] }) => {
-    const filteredRules = filterRules(signalRules);
+    const filteredRules = filterAndSortRules(signalRules);
     const rulesByGroup = getRulesByGroup(filteredRules);
 
     return (
@@ -165,53 +196,100 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
       {/* Filters */}
       <Card className="bg-slate-800 border-slate-700">
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search rules..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                  onClick={() => setSearchTerm("")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+          <div className="space-y-4">
+            {/* First Row: Search and Signal Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search rules..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Signal Type Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-300 whitespace-nowrap">Signal:</span>
+                <Select value={signalFilter} onValueChange={(value: "all" | "traces" | "metrics" | "logs") => setSignalFilter(value)}>
+                  <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="traces">Traces</SelectItem>
+                    <SelectItem value="metrics">Metrics</SelectItem>
+                    <SelectItem value="logs">Logs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Priority Filter */}
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant={priorityFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setPriorityFilter("all")}
-                className="text-xs"
-              >
-                All
-              </Button>
-              {Object.keys(priorityColors).map((priority) => (
+            {/* Second Row: Priority Filter and Sorting */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              {/* Priority Filter */}
+              <div className="flex gap-2 flex-wrap">
+                <span className="text-sm text-slate-300 whitespace-nowrap self-center">Priority:</span>
                 <Button
-                  key={priority}
-                  variant={priorityFilter === priority ? "default" : "outline"}
+                  variant={priorityFilter === "all" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setPriorityFilter(priority as Priority)}
-                  className={`text-xs ${
-                    priorityFilter === priority
-                      ? priorityColors[priority as Priority]
-                      : "hover:bg-slate-700"
-                  }`}
+                  onClick={() => setPriorityFilter("all")}
+                  className="text-xs"
                 >
-                  {priority}
+                  All
                 </Button>
-              ))}
+                {Object.keys(priorityColors).map((priority) => (
+                  <Button
+                    key={priority}
+                    variant={priorityFilter === priority ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPriorityFilter(priority as Priority)}
+                    className={`text-xs ${
+                      priorityFilter === priority
+                        ? priorityColors[priority as Priority]
+                        : "hover:bg-slate-700"
+                    }`}
+                  >
+                    {priority}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Sorting Controls */}
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-slate-300 whitespace-nowrap">Sort by:</span>
+                <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                  <SelectTrigger className="w-28 bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="priority">Priority</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="group">Group</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  className="p-2 bg-slate-700 border-slate-600 hover:bg-slate-600"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="ml-1 text-xs">{sortOrder.toUpperCase()}</span>
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -221,13 +299,13 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
       <Tabs defaultValue="traces" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700">
           <TabsTrigger value="traces" className="data-[state=active]:bg-slate-700">
-            Traces ({rulesBySignal.traces.length})
+            Traces ({filterAndSortRules(rulesBySignal.traces).length})
           </TabsTrigger>
           <TabsTrigger value="metrics" className="data-[state=active]:bg-slate-700">
-            Metrics ({rulesBySignal.metrics.length})
+            Metrics ({filterAndSortRules(rulesBySignal.metrics).length})
           </TabsTrigger>
           <TabsTrigger value="logs" className="data-[state=active]:bg-slate-700">
-            Logs ({rulesBySignal.logs.length})
+            Logs ({filterAndSortRules(rulesBySignal.logs).length})
           </TabsTrigger>
         </TabsList>
 
