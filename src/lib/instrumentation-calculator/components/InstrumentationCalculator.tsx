@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search, X, ArrowUpDown, Info } from 'lucide-react';
 import { InstrumentationScoreCalculator } from '../lib/calculator';
+import { loadOfficialSpec } from '../../score-drilldown/spec-parser';
 import type { Rule as SpecRule } from '../lib/types';
 import { RuleDetailsDialog } from '@/components/RuleDetailsDialog';
 
@@ -44,6 +45,63 @@ const FilterTabs = React.memo(({ activeFilter, setActiveFilter, ruleCounts, prio
     ))}
   </div>
 ));
+
+interface RuleItemProps {
+  rule: Rule;
+  priorityColors: Record<string, string>;
+  onShowRuleDetails: (rule: SpecRule) => void;
+}
+
+const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleItemProps) => {
+  return (
+    <div
+      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all border-l-4 ${
+        rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
+      }`}
+    >
+      <div className="flex-1 space-y-2">
+        <div className="flex items-center space-x-3">
+          <h4 className="font-medium text-foreground">{rule.name}</h4>
+          <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+            {rule.ruleCode}
+          </code>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
+            {rule.priority}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            {rule.category}
+          </Badge>
+          <Badge variant="secondary" className="text-xs">
+            {rule.signal}
+          </Badge>
+          <span className="text-sm text-muted-foreground">—</span>
+          <span className="text-sm font-medium text-foreground">
+            {rule.impact.toFixed(1)}pts
+          </span>
+        </div>
+      </div>
+
+      <div className="ml-4 flex items-center space-x-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground z-10 relative"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onShowRuleDetails(rule.specRule);
+          }}
+          title="View rule details and description"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+});
 
 // Adapter interface for UI display
 interface Rule {
@@ -105,29 +163,62 @@ export function InstrumentationCalculator({
   ScoreDisplayComponent,
   PriorityBreakdownComponent
 }: InstrumentationCalculatorProps) {
-  const [calculator] = useState(() => new InstrumentationScoreCalculator());
+  const [calculator, setCalculator] = useState<InstrumentationScoreCalculator | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [signalFilter, setSignalFilter] = useState<"all" | "traces" | "metrics" | "logs">("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [enabledRules, setEnabledRules] = useState(() => {
-    const initialEnabled = new Set<string>();
-    calculator.getAllRules().forEach(rule => {
-      if (calculator.isRuleEnabled(rule.id)) {
-        initialEnabled.add(rule.id);
-      }
-    });
-    return initialEnabled;
-  });
+  const [enabledRules, setEnabledRules] = useState<Set<string>>(new Set());
+  const [scoreResult, setScoreResult] = useState<any>(null);
 
   // Modal state for rule details
   const [selectedRule, setSelectedRule] = useState<SpecRule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const specInfo = calculator.getSpecInfo();
-  const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
+  // Load spec from remote repository
+  useEffect(() => {
+    const loadSpec = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const spec = await loadOfficialSpec();
+        const calc = new InstrumentationScoreCalculator(spec);
+        setCalculator(calc);
 
+        // Initialize enabled rules
+        const initialEnabled = new Set<string>();
+        calc.getAllRules().forEach(rule => {
+          if (calc.isRuleEnabled(rule.id)) {
+            initialEnabled.add(rule.id);
+          }
+        });
+        setEnabledRules(initialEnabled);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load specification');
+        console.error('Error loading spec:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSpec();
+  }, []);
+
+  // Update calculator state and score when enabled rules change
+  useEffect(() => {
+    if (!calculator) return;
+
+    calculator.disableAllRules();
+    enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
+    const result = calculator.calculateScore();
+    setScoreResult(result);
+  }, [calculator, enabledRules]);
+
+  // Pre-calculate all memoized values to avoid hooks order violations
+  const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
   const priorityColors = {
     critical: "bg-red-500 hover:bg-red-600",
     important: "bg-amber-500 hover:bg-amber-600",
@@ -137,9 +228,7 @@ export function InstrumentationCalculator({
 
   // Convert spec rules to UI format
   const rules: Rule[] = useMemo(() => {
-    calculator.disableAllRules();
-    enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
-    const scoreResult = calculator.calculateScore();
+    if (!calculator || !scoreResult) return [];
 
     return calculator.getAllRules().map((specRule: SpecRule) => ({
       id: specRule.id,
@@ -153,13 +242,25 @@ export function InstrumentationCalculator({
       enabled: enabledRules.has(specRule.id),
       specRule
     }));
-  }, [calculator, enabledRules]);
+  }, [calculator, enabledRules, scoreResult]);
 
   // Calculate scores and stats
   const stats = useMemo(() => {
-    calculator.disableAllRules();
-    enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
-    const scoreResult = calculator.calculateScore();
+    if (!calculator || !scoreResult) return {
+      totalScore: 0,
+      maxPossibleScore: 100,
+      enabledRules: 0,
+      totalRules: 0,
+      priorityBreakdown: {
+        critical: { count: 0, points: 0 },
+        important: { count: 0, points: 0 },
+        normal: { count: 0, points: 0 },
+        low: { count: 0, points: 0 },
+      },
+      ruleCounts: { all: 0, critical: 0, important: 0, normal: 0, low: 0 },
+      magnitudes: new Map(),
+    };
+
     const enabledRulesList = rules.filter(rule => rule.enabled);
 
     const priorityBreakdown = {
@@ -194,7 +295,7 @@ export function InstrumentationCalculator({
       ruleCounts,
       magnitudes: scoreResult.magnitudes,
     };
-  }, [rules, calculator, enabledRules]);
+  }, [rules, calculator, enabledRules, scoreResult]);
 
   // Filter and sort rules
   const filteredRules = useMemo(() => {
@@ -247,6 +348,38 @@ export function InstrumentationCalculator({
     return groups;
   }, [filteredRules]);
 
+  // Early returns after all hooks are defined
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading specification from repository...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !calculator) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading specification</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const specInfo = calculator.getSpecInfo();
+
   // TEMPORARILY DISABLED - no rule toggling allowed
   // const handleRuleToggle = (ruleId: string) => {
   //   setEnabledRules(prev => {
@@ -265,57 +398,6 @@ export function InstrumentationCalculator({
     setIsDialogOpen(true);
   };
 
-  const RuleItem = ({ rule }: { rule: Rule }) => {
-    return (
-      <div
-        className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all border-l-4 ${
-          rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
-        }`}
-      >
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center space-x-3">
-            <h4 className="font-medium text-foreground">{rule.name}</h4>
-            <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-              {rule.ruleCode}
-            </code>
-          </div>
-
-
-          <div className="flex items-center space-x-3">
-            <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
-              {rule.priority}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {rule.category}
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {rule.signal}
-            </Badge>
-            <span className="text-sm text-muted-foreground">—</span>
-            <span className="text-sm font-medium text-foreground">
-              {rule.impact.toFixed(1)}pts
-            </span>
-          </div>
-        </div>
-
-        <div className="ml-4 flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground z-10 relative"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleShowRuleDetails(rule.specRule);
-            }}
-            title="View rule details and description"
-          >
-            <Info className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
 
 
   return (
@@ -445,7 +527,12 @@ export function InstrumentationCalculator({
                     </h3>
                     <div className="space-y-3">
                       {categoryRules.map(rule => (
-                        <RuleItem key={rule.id} rule={rule} />
+                        <RuleItem
+                          key={rule.id}
+                          rule={rule}
+                          priorityColors={priorityColors}
+                          onShowRuleDetails={handleShowRuleDetails}
+                        />
                       ))}
                     </div>
                   </div>

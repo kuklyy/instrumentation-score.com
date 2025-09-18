@@ -9,6 +9,8 @@ export type Rule = {
   maxPoints?: number;
   specUrl?: string;
   rationale?: string;
+  markdownContent?: string;
+  criteria?: string;
 };
 
 export type Spec = {

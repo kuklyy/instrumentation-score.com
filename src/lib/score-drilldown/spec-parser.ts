@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import { Rule, Priority, Spec } from './types';
 
-const SPEC_REPO_URL = process.env.SPEC_REPO_URL || 'https://api.github.com/repos/instrumentation-score/spec/contents/rules';
+const SPEC_REPO_URL = 'https://api.github.com/repos/instrumentation-score/spec/contents/rules';
 
 export function parseRuleContent(content: string, filename: string): Rule | null {
   try {
@@ -103,33 +101,48 @@ export function parseRuleContent(content: string, filename: string): Rule | null
 
 export async function loadOfficialSpec(): Promise<Spec> {
   try {
+    console.log('Loading official specification from repository...');
+    const startTime = performance.now();
+
     const response = await fetch(SPEC_REPO_URL);
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
     }
 
     const files = await response.json();
-    const rules: Rule[] = [];
 
-    for (const file of files) {
-      if (file.name.endsWith('.md') && !file.name.startsWith('_') && file.type === 'file') {
-        try {
-          const fileResponse = await fetch(file.download_url);
-          if (!fileResponse.ok) {
-            console.warn(`Failed to fetch ${file.name}: ${fileResponse.status}`);
-            continue;
-          }
+    // Filter rule files and create fetch promises for parallel download
+    const ruleFiles = files.filter(file =>
+      file.name.endsWith('.md') &&
+      !file.name.startsWith('_') &&
+      file.type === 'file'
+    );
 
-          const content = await fileResponse.text();
-          const rule = parseRuleContent(content, file.name);
-          if (rule) {
-            rules.push(rule);
-          }
-        } catch (error) {
-          console.error(`Error fetching rule file ${file.name}:`, error);
+    // Fetch all rule files in parallel
+    const rulePromises = ruleFiles.map(async (file) => {
+      try {
+        const fileResponse = await fetch(file.download_url);
+        if (!fileResponse.ok) {
+          console.warn(`Failed to fetch ${file.name}: ${fileResponse.status}`);
+          return null;
         }
+
+        const content = await fileResponse.text();
+        const rule = parseRuleContent(content, file.name);
+        return rule;
+      } catch (error) {
+        console.error(`Error fetching rule file ${file.name}:`, error);
+        return null;
       }
-    }
+    });
+
+    // Wait for all downloads to complete and filter out null results
+    const ruleResults = await Promise.all(rulePromises);
+    const rules: Rule[] = ruleResults.filter(rule => rule !== null) as Rule[];
+
+    const endTime = performance.now();
+    const loadTime = Math.round(endTime - startTime);
+    console.log(`✅ Loaded ${rules.length} rules from ${ruleFiles.length} files in ${loadTime}ms (parallel download)`);
 
     // Official weights from the specification
     const priorityWeights = {
