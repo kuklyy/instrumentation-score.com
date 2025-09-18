@@ -1,7 +1,9 @@
 import React from 'react';
-import { ScoreDisplay } from '@/components/ScoreDisplay';
-import { PriorityBreakdown } from '@/components/PriorityBreakdown';
-import { InstrumentationCalculator } from '@/components/calculator/InstrumentationCalculator';
+import {
+  InstrumentationCalculator,
+  ScoreDisplay,
+  PriorityBreakdown
+} from '@/lib/instrumentation-calculator';
 
 const Calculator = () => {
   return (

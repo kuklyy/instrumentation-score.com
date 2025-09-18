@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search, X, ArrowUpDown, Info } from 'lucide-react';
-import { InstrumentationScoreCalculator } from '@/lib/score-drilldown/calculator';
-import type { Rule as SpecRule } from '@/lib/score-drilldown/types';
+import { InstrumentationScoreCalculator } from '../lib/calculator';
+import type { Rule as SpecRule } from '../lib/types';
 
 // Adapter interface for UI display
 interface Rule {
