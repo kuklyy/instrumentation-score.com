@@ -262,9 +262,9 @@ export function InstrumentationCalculator({
                 <div className="space-y-2">
                   <div className="font-medium">{rule.name}</div>
                   <div className="text-sm">{rule.specRule.rationale}</div>
-                  {rule.specRule.spec_url && (
+                  {rule.specRule.specUrl && (
                     <div className="text-xs text-blue-400">
-                      <a href={rule.specRule.spec_url} target="_blank" rel="noopener noreferrer">
+                      <a href={rule.specRule.specUrl} target="_blank" rel="noopener noreferrer">
                         View in specification →
                       </a>
                     </div>

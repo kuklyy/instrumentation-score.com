@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SPEC_RULES_DIR = '/Users/jakub/_/instrumentation-score-spec/rules';
+const SPEC_RULES_URL = process.env.SPEC_RULES_URL || 'https://api.github.com/repos/instrumentation-score/spec/contents/rules';
 const OUTPUT_FILE = path.join(__dirname, '../src/data/specRules.ts');
 
 function parseMarkdownRule(content, ruleId) {
@@ -122,19 +122,29 @@ function parseMarkdownRule(content, ruleId) {
   };
 }
 
-function parseAllRules() {
+async function parseAllRules() {
   const rules = [];
   let idCounter = 1;
 
   try {
-    const files = fs.readdirSync(SPEC_RULES_DIR);
+    const response = await fetch(SPEC_RULES_URL);
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+    }
+
+    const files = await response.json();
 
     for (const file of files) {
-      if (file.endsWith('.md') && file !== '_template.md') {
-        const ruleId = file.replace('.md', '');
-        const filePath = path.join(SPEC_RULES_DIR, file);
-        const content = fs.readFileSync(filePath, 'utf8');
+      if (file.name.endsWith('.md') && file.name !== '_template.md' && file.type === 'file') {
+        const ruleId = file.name.replace('.md', '');
 
+        const fileResponse = await fetch(file.download_url);
+        if (!fileResponse.ok) {
+          console.warn(`Failed to fetch ${file.name}: ${fileResponse.status}`);
+          continue;
+        }
+
+        const content = await fileResponse.text();
         const rule = parseMarkdownRule(content, ruleId);
         rule.id = idCounter.toString();
         rules.push(rule);
@@ -167,9 +177,9 @@ function generateTypeScriptFile(rules) {
   return `${imports}\n\n${rulesArray}\n`;
 }
 
-function main() {
+async function main() {
   console.log('Parsing rules from spec repository...');
-  const rules = parseAllRules();
+  const rules = await parseAllRules();
 
   if (rules.length === 0) {
     console.error('No rules parsed');

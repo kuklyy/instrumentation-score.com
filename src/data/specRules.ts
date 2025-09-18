@@ -104,11 +104,11 @@ export const specRules: Rule[] = [
     "id": "10",
     "name": "`service.instance.id` is unique across logical resources within a given `service.name`.",
     "description": "`service.instance.id` is unique across logical resources within a given `service.name`.",
-    "priority": "normal",
+    "priority": "important",
     "category": "resources",
     "enabled": true,
     "ruleCode": "RES-002",
-    "impact": 1.3
+    "impact": 2.6
   },
   {
     "id": "11",

@@ -97,18 +97,18 @@ export class InstrumentationScoreCalculator {
    * Range is 10-100 as per official specification
    */
   calculateScore(): ScoreResult {
-    const w = this.spec.priority_weights;
+    const w = this.spec.priorityWeights;
     const enabledRuleIds = this.enabledRules;
 
     // Calculate max possible score (sum of all rule weights)
     const maxScore = this.spec.rules.reduce(
-      (acc, r) => acc + (w[r.priority] * (r.max_points || 1)),
+      (acc, r) => acc + (w[r.priority] * (r.maxPoints || 1)),
       0
     );
 
     // Calculate current raw score (sum of enabled rule weights)
     const raw = this.spec.rules.reduce(
-      (acc, r) => acc + (enabledRuleIds.has(r.id) ? w[r.priority] * (r.max_points || 1) : 0),
+      (acc, r) => acc + (enabledRuleIds.has(r.id) ? w[r.priority] * (r.maxPoints || 1) : 0),
       0
     );
 
@@ -120,7 +120,7 @@ export class InstrumentationScoreCalculator {
     // Calculate magnitude (contribution) per rule
     const magnitudes = new Map<string, number>();
     for (const r of this.spec.rules) {
-      const pts = w[r.priority] * (r.max_points || 1);
+      const pts = w[r.priority] * (r.maxPoints || 1);
       magnitudes.set(r.id, maxScore === 0 ? 0 : (90 * pts) / maxScore);
     }
 
@@ -134,7 +134,7 @@ export class InstrumentationScoreCalculator {
 
     for (const rule of this.spec.rules) {
       const priority = rule.priority;
-      const rulePoints = w[priority] * (rule.max_points || 1);
+      const rulePoints = w[priority] * (rule.maxPoints || 1);
 
       breakdown[priority].total += 1;
       if (enabledRuleIds.has(rule.id)) {
@@ -215,7 +215,7 @@ export class InstrumentationScoreCalculator {
     return {
       version: this.spec.version,
       totalRules: this.spec.rules.length,
-      priorityWeights: this.spec.priority_weights
+      priorityWeights: this.spec.priorityWeights
     };
   }
 }

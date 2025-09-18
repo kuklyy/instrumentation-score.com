@@ -2,11 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { Rule, Priority, Spec } from './types';
 
-const SPEC_REPO_PATH = '/Users/jakub/_/instrumentation-score-spec';
+const SPEC_REPO_URL = process.env.SPEC_REPO_URL || 'https://api.github.com/repos/instrumentation-score/spec/contents/rules';
 
-export function parseRuleFile(filePath: string): Rule | null {
+export function parseRuleContent(content: string, filename: string): Rule | null {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
 
     let id = '';
@@ -32,7 +31,7 @@ export function parseRuleFile(filePath: string): Rule | null {
     }
 
     if (!id || !name || !impact) {
-      console.warn(`Incomplete rule data in ${filePath}`);
+      console.warn(`Incomplete rule data in ${filename}`);
       return null;
     }
 
@@ -46,7 +45,7 @@ export function parseRuleFile(filePath: string): Rule | null {
 
     const priority = priorityMap[impact];
     if (!priority) {
-      console.warn(`Unknown impact level "${impact}" in ${filePath}`);
+      console.warn(`Unknown impact level "${impact}" in ${filename}`);
       return null;
     }
 
@@ -85,41 +84,59 @@ export function parseRuleFile(filePath: string): Rule | null {
       signal,
       group,
       rationale,
-      max_points: 1
+      maxPoints: 1
     };
   } catch (error) {
-    console.error(`Error parsing rule file ${filePath}:`, error);
+    console.error(`Error parsing rule content from ${filename}:`, error);
     return null;
   }
 }
 
-export function loadOfficialSpec(): Spec {
-  const rulesDir = path.join(SPEC_REPO_PATH, 'rules');
-  const ruleFiles = fs.readdirSync(rulesDir).filter(file =>
-    file.endsWith('.md') && !file.startsWith('_')
-  );
-
-  const rules: Rule[] = [];
-
-  for (const file of ruleFiles) {
-    const filePath = path.join(rulesDir, file);
-    const rule = parseRuleFile(filePath);
-    if (rule) {
-      rules.push(rule);
+export async function loadOfficialSpec(): Promise<Spec> {
+  try {
+    const response = await fetch(SPEC_REPO_URL);
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
     }
+
+    const files = await response.json();
+    const rules: Rule[] = [];
+
+    for (const file of files) {
+      if (file.name.endsWith('.md') && !file.name.startsWith('_') && file.type === 'file') {
+        try {
+          const fileResponse = await fetch(file.download_url);
+          if (!fileResponse.ok) {
+            console.warn(`Failed to fetch ${file.name}: ${fileResponse.status}`);
+            continue;
+          }
+
+          const content = await fileResponse.text();
+          const rule = parseRuleContent(content, file.name);
+          if (rule) {
+            rules.push(rule);
+          }
+        } catch (error) {
+          console.error(`Error fetching rule file ${file.name}:`, error);
+        }
+      }
+    }
+
+    // Official weights from the specification
+    const priorityWeights = {
+      critical: 40,
+      important: 30,
+      normal: 20,
+      low: 10
+    };
+
+    return {
+      version: '0.1.0',
+      priorityWeights,
+      rules
+    };
+  } catch (error) {
+    console.error('Error loading official spec:', error);
+    throw error;
   }
-
-  // Official weights from the specification
-  const priority_weights = {
-    critical: 40,
-    important: 30,
-    normal: 20,
-    low: 10
-  };
-
-  return {
-    version: '0.1.0',
-    priority_weights,
-    rules
-  };
 }

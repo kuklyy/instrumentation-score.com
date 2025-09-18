@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,6 +9,85 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Info, Search, X, ArrowUpDown } from "lucide-react";
 import { type Rule, getRulesBySignal, getRulesByGroup, type Priority } from "@/lib/scoring";
+
+interface SignalTabProps {
+  signal: string;
+  rules: Rule[];
+  filterAndSortRules: (rules: Rule[]) => Rule[];
+  onToggleRule: (ruleId: string) => void;
+  magnitudes: Map<string, number>;
+}
+
+const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filterAndSortRules, onToggleRule, magnitudes }) => {
+  const filteredRules = filterAndSortRules(signalRules);
+  const rulesByGroup = getRulesByGroup(filteredRules);
+
+  const RuleRow = ({ rule }: { rule: Rule }) => (
+    <div className="flex items-center justify-between p-4 border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50 transition-colors">
+      <div className="flex items-center space-x-3 flex-1">
+        <Checkbox
+          checked={rule.enabled}
+          onCheckedChange={() => onToggleRule(rule.id)}
+          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-white truncate">{rule.name}</span>
+            <Badge variant={rule.priority as "critical" | "important" | "normal" | "low"}>
+              {rule.priority}
+            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-slate-400" />
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-sm">
+                <div className="space-y-2">
+                  <div className="font-medium">{rule.name}</div>
+                  <div className="text-sm">{rule.rationale}</div>
+                  {rule.specUrl && (
+                    <div className="text-xs text-blue-400">
+                      <a href={rule.specUrl} target="_blank" rel="noopener noreferrer">
+                        View in specification →
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <div className="text-sm text-slate-400">
+            {rule.ruleCode} • Impact: {(magnitudes.get(rule.id) || 0).toFixed(1)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {Array.from(rulesByGroup.entries()).map(([group, groupRules]) => (
+        <Card key={group} className="bg-slate-800 border-slate-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg capitalize text-white">
+              {group} ({groupRules.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {groupRules.map(rule => (
+              <RuleRow key={rule.id} rule={rule} />
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+
+      {filteredRules.length === 0 && (
+        <div className="text-center py-12 text-slate-400">
+          No rules match your current filters
+        </div>
+      )}
+    </div>
+  );
+});
 
 interface RuleTableProps {
   rules: Rule[];
@@ -29,6 +108,13 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const rulesBySignal = getRulesBySignal(rules);
+
+  // Memoize filtered rule counts to avoid redundant calculations
+  const filteredRuleCounts = useMemo(() => ({
+    traces: filterAndSortRules(rulesBySignal.traces).length,
+    metrics: filterAndSortRules(rulesBySignal.metrics).length,
+    logs: filterAndSortRules(rulesBySignal.logs).length,
+  }), [rulesBySignal, searchTerm, priorityFilter, signalFilter, sortBy, sortOrder]);
 
   const priorityColors = {
     critical: "bg-red-500 hover:bg-red-600",
@@ -146,9 +232,9 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
               <div className="space-y-2">
                 <div className="font-medium">{rule.name}</div>
                 <div className="text-sm">{rule.rationale}</div>
-                {rule.spec_url && (
+                {rule.specUrl && (
                   <div className="text-xs text-blue-400">
-                    <a href={rule.spec_url} target="_blank" rel="noopener noreferrer">
+                    <a href={rule.specUrl} target="_blank" rel="noopener noreferrer">
                       View in specification →
                     </a>
                   </div>
@@ -161,35 +247,6 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
     );
   };
 
-  const SignalTab = ({ signal, rules: signalRules }: { signal: string; rules: Rule[] }) => {
-    const filteredRules = filterAndSortRules(signalRules);
-    const rulesByGroup = getRulesByGroup(filteredRules);
-
-    return (
-      <div className="space-y-6">
-        {Array.from(rulesByGroup.entries()).map(([group, groupRules]) => (
-          <Card key={group} className="bg-slate-800 border-slate-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg capitalize text-white">
-                {group} ({groupRules.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {groupRules.map(rule => (
-                <RuleRow key={rule.id} rule={rule} />
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-
-        {filteredRules.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
-            No rules match your current filters
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -299,26 +356,44 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
       <Tabs defaultValue="traces" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700">
           <TabsTrigger value="traces" className="data-[state=active]:bg-slate-700">
-            Traces ({filterAndSortRules(rulesBySignal.traces).length})
+            Traces ({filteredRuleCounts.traces})
           </TabsTrigger>
           <TabsTrigger value="metrics" className="data-[state=active]:bg-slate-700">
-            Metrics ({filterAndSortRules(rulesBySignal.metrics).length})
+            Metrics ({filteredRuleCounts.metrics})
           </TabsTrigger>
           <TabsTrigger value="logs" className="data-[state=active]:bg-slate-700">
-            Logs ({filterAndSortRules(rulesBySignal.logs).length})
+            Logs ({filteredRuleCounts.logs})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="traces" className="mt-6">
-          <SignalTab signal="traces" rules={rulesBySignal.traces} />
+          <SignalTab
+            signal="traces"
+            rules={rulesBySignal.traces}
+            filterAndSortRules={filterAndSortRules}
+            onToggleRule={onToggleRule}
+            magnitudes={magnitudes}
+          />
         </TabsContent>
 
         <TabsContent value="metrics" className="mt-6">
-          <SignalTab signal="metrics" rules={rulesBySignal.metrics} />
+          <SignalTab
+            signal="metrics"
+            rules={rulesBySignal.metrics}
+            filterAndSortRules={filterAndSortRules}
+            onToggleRule={onToggleRule}
+            magnitudes={magnitudes}
+          />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">
-          <SignalTab signal="logs" rules={rulesBySignal.logs} />
+          <SignalTab
+            signal="logs"
+            rules={rulesBySignal.logs}
+            filterAndSortRules={filterAndSortRules}
+            onToggleRule={onToggleRule}
+            magnitudes={magnitudes}
+          />
         </TabsContent>
       </Tabs>
     </div>

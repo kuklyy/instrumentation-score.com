@@ -6,14 +6,14 @@ export type Rule = {
   priority: Priority;
   signal: "traces" | "metrics" | "logs";
   group: string;
-  max_points?: number;
-  spec_url?: string;
+  maxPoints?: number;
+  specUrl?: string;
   rationale?: string;
 };
 
 export type Spec = {
   version: string;
-  priority_weights: Record<Priority, number>;
+  priorityWeights: Record<Priority, number>;
   rules: Rule[];
 };
 

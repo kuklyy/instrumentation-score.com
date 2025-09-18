@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -96,12 +96,22 @@ export function InstrumentationCalculator({
     low: "bg-slate-500 hover:bg-slate-600"
   };
 
-  // Convert spec rules to UI format
-  const rules: Rule[] = useMemo(() => {
+  // State for storing score results
+  const [scoreResult, setScoreResult] = useState(() => {
+    calculator.disableAllRules();
+    return calculator.calculateScore();
+  });
+
+  // Effect to update calculator state and score when enabled rules change
+  useEffect(() => {
     calculator.disableAllRules();
     enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
-    const scoreResult = calculator.calculateScore();
+    const newScoreResult = calculator.calculateScore();
+    setScoreResult(newScoreResult);
+  }, [calculator, enabledRules]);
 
+  // Convert spec rules to UI format
+  const rules: Rule[] = useMemo(() => {
     return calculator.getAllRules().map((specRule: SpecRule) => ({
       id: specRule.id,
       name: specRule.name,
@@ -114,13 +124,10 @@ export function InstrumentationCalculator({
       enabled: enabledRules.has(specRule.id),
       specRule
     }));
-  }, [calculator, enabledRules]);
+  }, [calculator, enabledRules, scoreResult]);
 
   // Calculate scores and stats
   const stats = useMemo(() => {
-    calculator.disableAllRules();
-    enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
-    const scoreResult = calculator.calculateScore();
     const enabledRulesList = rules.filter(rule => rule.enabled);
 
     const priorityBreakdown = {
@@ -155,7 +162,7 @@ export function InstrumentationCalculator({
       ruleCounts,
       magnitudes: scoreResult.magnitudes,
     };
-  }, [rules, calculator, enabledRules]);
+  }, [rules, calculator, enabledRules, scoreResult]);
 
   // Filter and sort rules
   const filteredRules = useMemo(() => {
@@ -262,9 +269,9 @@ export function InstrumentationCalculator({
                 <div className="space-y-2">
                   <div className="font-medium">{rule.name}</div>
                   <div className="text-sm">{rule.specRule.rationale}</div>
-                  {rule.specRule.spec_url && (
+                  {rule.specRule.specUrl && (
                     <div className="text-xs text-blue-400">
-                      <a href={rule.specRule.spec_url} target="_blank" rel="noopener noreferrer">
+                      <a href={rule.specRule.specUrl} target="_blank" rel="noopener noreferrer">
                         View in specification →
                       </a>
                     </div>
