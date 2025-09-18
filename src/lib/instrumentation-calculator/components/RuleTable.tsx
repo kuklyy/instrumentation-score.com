@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Info, Search, X, ArrowUpDown } from "lucide-react";
-import { type Rule, getRulesBySignal, getRulesByGroup, type Priority } from "@/lib/scoring";
+import { type Rule, type Priority } from "../../score-drilldown/types";
 
 interface SignalTabProps {
   signal: string;
@@ -31,7 +31,17 @@ const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filt
       <div className="flex items-center space-x-3 flex-1">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-white truncate">{rule.name}</span>
+            <span className="font-medium text-white truncate">
+              {rule.name.split(/(`[^`]*`)/).map((part, index) =>
+                part.startsWith('`') && part.endsWith('`') ? (
+                  <code key={index} className="bg-slate-700 px-1 py-0.5 rounded text-xs font-mono text-slate-200">
+                    {part.slice(1, -1)}
+                  </code>
+                ) : (
+                  part
+                )
+              )}
+            </span>
             <Badge variant={rule.priority as "critical" | "important" | "normal" | "low"}>
               {rule.priority}
             </Badge>
@@ -102,7 +112,7 @@ type SortOrder = "asc" | "desc";
 export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, priorityWeights }: RuleTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
-  const [signalFilter, setSignalFilter] = useState<"all" | "traces" | "metrics" | "logs">("all");
+  const [signalFilter, setSignalFilter] = useState<"all" | "resources" | "spans" | "metrics" | "logs" | "sdk">("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
@@ -110,9 +120,11 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
 
   // Memoize filtered rule counts to avoid redundant calculations
   const filteredRuleCounts = useMemo(() => ({
-    traces: filterAndSortRules(rulesBySignal.traces).length,
+    resources: filterAndSortRules(rulesBySignal.resources).length,
+    spans: filterAndSortRules(rulesBySignal.spans).length,
     metrics: filterAndSortRules(rulesBySignal.metrics).length,
     logs: filterAndSortRules(rulesBySignal.logs).length,
+    sdk: filterAndSortRules(rulesBySignal.sdk).length,
   }), [rulesBySignal, searchTerm, priorityFilter, signalFilter, sortBy, sortOrder]);
 
   const priorityColors = {
@@ -175,7 +187,17 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
         {/* Rule Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-white truncate">{rule.name}</span>
+            <span className="font-medium text-white truncate">
+              {rule.name.split(/(`[^`]*`)/).map((part, index) =>
+                part.startsWith('`') && part.endsWith('`') ? (
+                  <code key={index} className="bg-slate-700 px-1 py-0.5 rounded text-xs font-mono text-slate-200">
+                    {part.slice(1, -1)}
+                  </code>
+                ) : (
+                  part
+                )
+              )}
+            </span>
             <code className="text-xs text-slate-400 bg-slate-700 px-1.5 py-0.5 rounded">
               {rule.id}
             </code>
@@ -279,15 +301,17 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
               {/* Signal Type Filter */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-300 whitespace-nowrap">Signal:</span>
-                <Select value={signalFilter} onValueChange={(value: "all" | "traces" | "metrics" | "logs") => setSignalFilter(value)}>
+                <Select value={signalFilter} onValueChange={(value: "all" | "resources" | "spans" | "metrics" | "logs" | "sdk") => setSignalFilter(value)}>
                   <SelectTrigger className="w-32 bg-slate-700 border-slate-600 text-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600">
                     <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="traces">Traces</SelectItem>
+                    <SelectItem value="resources">Resources</SelectItem>
+                    <SelectItem value="spans">Spans</SelectItem>
                     <SelectItem value="metrics">Metrics</SelectItem>
                     <SelectItem value="logs">Logs</SelectItem>
+                    <SelectItem value="sdk">SDK</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -352,10 +376,13 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="traces" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800 border border-slate-700">
-          <TabsTrigger value="traces" className="data-[state=active]:bg-slate-700">
-            Traces ({filteredRuleCounts.traces})
+      <Tabs defaultValue="resources" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 bg-slate-800 border border-slate-700">
+          <TabsTrigger value="resources" className="data-[state=active]:bg-slate-700">
+            Resources ({filteredRuleCounts.resources})
+          </TabsTrigger>
+          <TabsTrigger value="spans" className="data-[state=active]:bg-slate-700">
+            Spans ({filteredRuleCounts.spans})
           </TabsTrigger>
           <TabsTrigger value="metrics" className="data-[state=active]:bg-slate-700">
             Metrics ({filteredRuleCounts.metrics})
@@ -363,12 +390,25 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
           <TabsTrigger value="logs" className="data-[state=active]:bg-slate-700">
             Logs ({filteredRuleCounts.logs})
           </TabsTrigger>
+          <TabsTrigger value="sdk" className="data-[state=active]:bg-slate-700">
+            SDK ({filteredRuleCounts.sdk})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="traces" className="mt-6">
+        <TabsContent value="resources" className="mt-6">
           <SignalTab
-            signal="traces"
-            rules={rulesBySignal.traces}
+            signal="resources"
+            rules={rulesBySignal.resources}
+            filterAndSortRules={filterAndSortRules}
+            onToggleRule={onToggleRule}
+            magnitudes={magnitudes}
+          />
+        </TabsContent>
+
+        <TabsContent value="spans" className="mt-6">
+          <SignalTab
+            signal="spans"
+            rules={rulesBySignal.spans}
             filterAndSortRules={filterAndSortRules}
             onToggleRule={onToggleRule}
             magnitudes={magnitudes}
@@ -389,6 +429,16 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
           <SignalTab
             signal="logs"
             rules={rulesBySignal.logs}
+            filterAndSortRules={filterAndSortRules}
+            onToggleRule={onToggleRule}
+            magnitudes={magnitudes}
+          />
+        </TabsContent>
+
+        <TabsContent value="sdk" className="mt-6">
+          <SignalTab
+            signal="sdk"
+            rules={rulesBySignal.sdk}
             filterAndSortRules={filterAndSortRules}
             onToggleRule={onToggleRule}
             magnitudes={magnitudes}

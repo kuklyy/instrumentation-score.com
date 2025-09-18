@@ -14,7 +14,9 @@ export function parseRuleContent(content: string, filename: string): Rule | null
     let criteria = '';
 
     // Extract criteria section if it exists
-    const criteriaStart = content.indexOf('## Criteria') || content.indexOf('**Criteria:**');
+    const criteriaSection1 = content.indexOf('## Criteria');
+    const criteriaSection2 = content.indexOf('**Criteria:**');
+    const criteriaStart = criteriaSection1 !== -1 ? criteriaSection1 : criteriaSection2;
     if (criteriaStart !== -1) {
       criteria = content.substring(criteriaStart);
     }
@@ -54,16 +56,20 @@ export function parseRuleContent(content: string, filename: string): Rule | null
       return null;
     }
 
-    // Infer signal from rule ID prefix
-    let signal: 'traces' | 'metrics' | 'logs';
-    if (id.startsWith('RES-') || id.startsWith('SPA-') || id.startsWith('SDK-')) {
-      signal = 'traces';
+    // Infer signal from rule ID prefix - signal should match the group
+    let signal: 'resources' | 'spans' | 'metrics' | 'logs' | 'sdk';
+    if (id.startsWith('RES-')) {
+      signal = 'resources';
+    } else if (id.startsWith('SPA-')) {
+      signal = 'spans';
     } else if (id.startsWith('MET-')) {
       signal = 'metrics';
     } else if (id.startsWith('LOG-')) {
       signal = 'logs';
+    } else if (id.startsWith('SDK-')) {
+      signal = 'sdk';
     } else {
-      signal = 'traces'; // default
+      signal = 'resources'; // default
     }
 
     // Infer group from target or ID
@@ -82,6 +88,19 @@ export function parseRuleContent(content: string, filename: string): Rule | null
       group = target.toLowerCase();
     }
 
+    // Filter out redundant information from markdown content
+    let filteredContent = content;
+
+    // Remove sections that are already displayed in the UI
+    filteredContent = filteredContent.replace(/\*\*Rule ID:\*\*[^\n]*\n/g, '');
+    filteredContent = filteredContent.replace(/\*\*Description:\*\*[^\n]*\n/g, '');
+    filteredContent = filteredContent.replace(/\*\*Target:\*\*[^\n]*\n/g, '');
+    filteredContent = filteredContent.replace(/\*\*Impact:\*\*[^\n]*\n/g, '');
+
+    // Clean up any extra line breaks
+    filteredContent = filteredContent.replace(/\n\n\n+/g, '\n\n');
+    filteredContent = filteredContent.trim();
+
     return {
       id,
       name,
@@ -90,7 +109,7 @@ export function parseRuleContent(content: string, filename: string): Rule | null
       group,
       rationale,
       criteria,
-      markdownContent: content,
+      markdownContent: filteredContent,
       maxPoints: 1
     };
   } catch (error) {

@@ -6,9 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search, X, ArrowUpDown, Info } from 'lucide-react';
-import { InstrumentationScoreCalculator } from '../lib/calculator';
+import { InstrumentationScoreCalculator } from '../../score-drilldown/calculator';
 import { loadOfficialSpec } from '../../score-drilldown/spec-parser';
-import type { Rule as SpecRule } from '../lib/types';
+import type { Rule as SpecRule } from '../../score-drilldown/types';
 import { RuleDetailsDialog } from '@/components/RuleDetailsDialog';
 
 interface FilterTabsProps {
@@ -61,7 +61,17 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleIt
     >
       <div className="flex-1 space-y-2">
         <div className="flex items-center space-x-3">
-          <h4 className="font-medium text-foreground">{rule.name}</h4>
+          <h4 className="font-medium text-foreground">
+            {rule.name.split(/(`[^`]*`)/).map((part, index) =>
+              part.startsWith('`') && part.endsWith('`') ? (
+                <code key={index} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
+                  {part.slice(1, -1)}
+                </code>
+              ) : (
+                part
+              )
+            )}
+          </h4>
           <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
             {rule.ruleCode}
           </code>
@@ -74,12 +84,9 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleIt
           <Badge variant="outline" className="text-xs">
             {rule.category}
           </Badge>
-          <Badge variant="secondary" className="text-xs">
-            {rule.signal}
-          </Badge>
           <span className="text-sm text-muted-foreground">—</span>
           <span className="text-sm font-medium text-foreground">
-            {rule.impact.toFixed(1)}pts
+            {(magnitudes?.get(rule.id) || 0).toFixed(1)}pts
           </span>
         </div>
       </div>
@@ -110,7 +117,7 @@ interface Rule {
   description: string;
   priority: 'critical' | 'important' | 'normal' | 'low';
   category: string;
-  signal: 'traces' | 'metrics' | 'logs';
+  signal: 'resources' | 'spans' | 'metrics' | 'logs' | 'sdk';
   ruleCode: string;
   impact: number;
   enabled: boolean;
@@ -168,7 +175,7 @@ export function InstrumentationCalculator({
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [signalFilter, setSignalFilter] = useState<"all" | "traces" | "metrics" | "logs">("all");
+  const [signalFilter, setSignalFilter] = useState<"all" | "resources" | "spans" | "metrics" | "logs" | "sdk">("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [enabledRules, setEnabledRules] = useState<Set<string>>(new Set());
@@ -468,15 +475,17 @@ export function InstrumentationCalculator({
 
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground whitespace-nowrap">Signal:</span>
-                    <Select value={signalFilter} onValueChange={(value: "all" | "traces" | "metrics" | "logs") => setSignalFilter(value)}>
+                    <Select value={signalFilter} onValueChange={(value: "all" | "resources" | "spans" | "metrics" | "logs" | "sdk") => setSignalFilter(value)}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="traces">Traces</SelectItem>
+                        <SelectItem value="resources">Resources</SelectItem>
+                        <SelectItem value="spans">Spans</SelectItem>
                         <SelectItem value="metrics">Metrics</SelectItem>
                         <SelectItem value="logs">Logs</SelectItem>
+                        <SelectItem value="sdk">SDK</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

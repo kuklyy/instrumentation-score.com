@@ -3,13 +3,13 @@ import officialSpec from './official-spec.json';
 
 export class InstrumentationScoreCalculator {
   private spec: Spec;
-  private enabledRules: Set<string>;
+  private satisfiedRules: Set<string>;
 
   constructor(customSpec?: Spec) {
     // Use official spec by default, or allow custom spec
     this.spec = customSpec || (officialSpec as Spec);
-    // Start with all rules enabled by default
-    this.enabledRules = new Set(this.spec.rules.map(r => r.id));
+    // Start with all rules satisfied by default
+    this.satisfiedRules = new Set(this.spec.rules.map(r => r.id));
   }
 
   /**
@@ -20,85 +20,85 @@ export class InstrumentationScoreCalculator {
   }
 
   /**
-   * Get currently enabled rules
+   * Get currently satisfied rules
    */
-  getEnabledRules(): Rule[] {
-    return this.spec.rules.filter(rule => this.enabledRules.has(rule.id));
+  getSatisfiedRules(): Rule[] {
+    return this.spec.rules.filter(rule => this.satisfiedRules.has(rule.id));
   }
 
   /**
-   * Get currently disabled rules
+   * Get currently violated rules
    */
-  getDisabledRules(): Rule[] {
-    return this.spec.rules.filter(rule => !this.enabledRules.has(rule.id));
+  getViolatedRules(): Rule[] {
+    return this.spec.rules.filter(rule => !this.satisfiedRules.has(rule.id));
   }
 
   /**
-   * Enable a specific rule by ID
+   * Mark a specific rule as satisfied by ID
    */
-  enableRule(ruleId: string): boolean {
+  setRuleSatisfied(ruleId: string): boolean {
     if (this.spec.rules.some(r => r.id === ruleId)) {
-      this.enabledRules.add(ruleId);
+      this.satisfiedRules.add(ruleId);
       return true;
     }
     return false;
   }
 
   /**
-   * Disable a specific rule by ID
+   * Mark a specific rule as violated by ID
    */
-  disableRule(ruleId: string): boolean {
+  setRuleViolated(ruleId: string): boolean {
     if (this.spec.rules.some(r => r.id === ruleId)) {
-      this.enabledRules.delete(ruleId);
+      this.satisfiedRules.delete(ruleId);
       return true;
     }
     return false;
   }
 
   /**
-   * Set multiple rules as enabled/disabled
-   * @param ruleStates Object mapping rule IDs to boolean enabled state
+   * Set multiple rules as satisfied/violated
+   * @param ruleStates Object mapping rule IDs to boolean satisfied state
    */
   setRuleStates(ruleStates: Record<string, boolean>): void {
-    for (const [ruleId, enabled] of Object.entries(ruleStates)) {
-      if (enabled) {
-        this.enableRule(ruleId);
+    for (const [ruleId, satisfied] of Object.entries(ruleStates)) {
+      if (satisfied) {
+        this.setRuleSatisfied(ruleId);
       } else {
-        this.disableRule(ruleId);
+        this.setRuleViolated(ruleId);
       }
     }
   }
 
   /**
-   * Enable all rules
+   * Mark all rules as satisfied
    */
-  enableAllRules(): void {
-    this.enabledRules = new Set(this.spec.rules.map(r => r.id));
+  setAllRulesSatisfied(): void {
+    this.satisfiedRules = new Set(this.spec.rules.map(r => r.id));
   }
 
   /**
-   * Disable all rules
+   * Mark all rules as violated
    */
-  disableAllRules(): void {
-    this.enabledRules.clear();
+  setAllRulesViolated(): void {
+    this.satisfiedRules.clear();
   }
 
   /**
-   * Check if a rule is enabled
+   * Check if a rule is satisfied
    */
-  isRuleEnabled(ruleId: string): boolean {
-    return this.enabledRules.has(ruleId);
+  isRuleSatisfied(ruleId: string): boolean {
+    return this.satisfiedRules.has(ruleId);
   }
 
   /**
-   * Calculate the instrumentation score based on currently enabled rules
+   * Calculate the instrumentation score based on currently satisfied rules
    * This follows the official formula from the spec:
    * Score = (Σ(Pi × Wi) / Σ(Ti × Wi)) × 90 + 10
    * Range is 10-100 as per official specification
    */
   calculateScore(): ScoreResult {
     const w = this.spec.priorityWeights;
-    const enabledRuleIds = this.enabledRules;
+    const satisfiedRuleIds = this.satisfiedRules;
 
     // Calculate max possible score (sum of all rule weights)
     const maxScore = this.spec.rules.reduce(
@@ -106,9 +106,9 @@ export class InstrumentationScoreCalculator {
       0
     );
 
-    // Calculate current raw score (sum of enabled rule weights)
+    // Calculate current raw score (sum of satisfied rule weights)
     const raw = this.spec.rules.reduce(
-      (acc, r) => acc + (enabledRuleIds.has(r.id) ? w[r.priority] * (r.maxPoints || 1) : 0),
+      (acc, r) => acc + (satisfiedRuleIds.has(r.id) ? w[r.priority] * (r.maxPoints || 1) : 0),
       0
     );
 
@@ -126,10 +126,10 @@ export class InstrumentationScoreCalculator {
 
     // Calculate breakdown by priority
     const breakdown = {
-      critical: { enabled: 0, total: 0, points: 0 },
-      important: { enabled: 0, total: 0, points: 0 },
-      normal: { enabled: 0, total: 0, points: 0 },
-      low: { enabled: 0, total: 0, points: 0 }
+      critical: { satisfied: 0, total: 0, points: 0 },
+      important: { satisfied: 0, total: 0, points: 0 },
+      normal: { satisfied: 0, total: 0, points: 0 },
+      low: { satisfied: 0, total: 0, points: 0 }
     };
 
     for (const rule of this.spec.rules) {
@@ -137,8 +137,8 @@ export class InstrumentationScoreCalculator {
       const rulePoints = w[priority] * (rule.maxPoints || 1);
 
       breakdown[priority].total += 1;
-      if (enabledRuleIds.has(rule.id)) {
-        breakdown[priority].enabled += 1;
+      if (satisfiedRuleIds.has(rule.id)) {
+        breakdown[priority].satisfied += 1;
         breakdown[priority].points += rulePoints;
       }
     }
@@ -149,11 +149,13 @@ export class InstrumentationScoreCalculator {
   /**
    * Get rules grouped by signal type
    */
-  getRulesBySignal(): { traces: Rule[]; metrics: Rule[]; logs: Rule[] } {
+  getRulesBySignal(): { resources: Rule[]; spans: Rule[]; metrics: Rule[]; logs: Rule[]; sdk: Rule[] } {
     const signals = {
-      traces: this.spec.rules.filter(r => r.signal === "traces"),
+      resources: this.spec.rules.filter(r => r.signal === "resources"),
+      spans: this.spec.rules.filter(r => r.signal === "spans"),
       metrics: this.spec.rules.filter(r => r.signal === "metrics"),
-      logs: this.spec.rules.filter(r => r.signal === "logs")
+      logs: this.spec.rules.filter(r => r.signal === "logs"),
+      sdk: this.spec.rules.filter(r => r.signal === "sdk")
     };
     return signals;
   }
@@ -175,14 +177,14 @@ export class InstrumentationScoreCalculator {
   }
 
   /**
-   * Get top impact disabled rules (highest contribution rules that are not enabled)
+   * Get top impact violated rules (highest contribution rules that are violated)
    */
-  getTopImpactDisabledRules(limit: number = 3): Rule[] {
+  getTopImpactViolatedRules(limit: number = 3): Rule[] {
     const scoreResult = this.calculateScore();
     const magnitudes = scoreResult.magnitudes;
 
     return this.spec.rules
-      .filter(rule => !this.enabledRules.has(rule.id))
+      .filter(rule => !this.satisfiedRules.has(rule.id))
       .sort((a, b) => (magnitudes.get(b.id) || 0) - (magnitudes.get(a.id) || 0))
       .slice(0, limit);
   }
@@ -194,17 +196,17 @@ export class InstrumentationScoreCalculator {
     const score = this.calculateScore();
     const rulesBySignal = this.getRulesBySignal();
     const rulesByGroup = this.getRulesByGroup();
-    const topImpactDisabledRules = this.getTopImpactDisabledRules();
-    const enabledRules = this.getEnabledRules();
-    const disabledRules = this.getDisabledRules();
+    const topImpactViolatedRules = this.getTopImpactViolatedRules();
+    const satisfiedRules = this.getSatisfiedRules();
+    const violatedRules = this.getViolatedRules();
 
     return {
       score,
       rulesBySignal,
       rulesByGroup,
-      topImpactDisabledRules,
-      enabledRules,
-      disabledRules
+      topImpactViolatedRules,
+      satisfiedRules,
+      violatedRules
     };
   }
 

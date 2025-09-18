@@ -1,1 +1,0 @@
-export { type Rule, specRules as sampleRules } from './specRules.js';

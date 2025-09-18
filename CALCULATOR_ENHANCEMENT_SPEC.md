@@ -89,6 +89,11 @@ export type Rule = {
    - Temporarily disabled enable/disable functionality
    - Cleaned up event handlers to prevent conflicts
 
+5. **API Terminology Refactoring**
+   - Updated API from "enable/disable" to "satisfied/violated" terminology
+   - More intuitive naming that reflects rule compliance state
+   - Updated all method names, types, and documentation
+
 ### 🔄 In Progress
 1. **Component Consolidation**
    - Multiple calculator components identified
@@ -113,10 +118,13 @@ export type Rule = {
 ## File Changes Summary
 
 ### Modified Files
-- `/src/lib/score-drilldown/types.ts` - Enhanced Rule type
+- `/src/lib/score-drilldown/types.ts` - Enhanced Rule type, updated ScoreResult breakdown terminology
+- `/src/lib/score-drilldown/calculator.ts` - Refactored API to use satisfied/violated terminology
+- `/src/lib/score-drilldown/calculator.test.ts` - Updated tests for new API
 - `/src/lib/score-drilldown/spec-parser.ts` - Added markdown content storage
 - `/src/lib/instrumentation-calculator/components/InstrumentationCalculator.tsx` - Main calculator updates
 - `/package.json` - Added react-markdown dependency
+- `/CALCULATOR_API.md` - Updated documentation for new API terminology
 
 ### Created Files
 - `/src/components/RuleMarkdown.tsx` - Markdown rendering component

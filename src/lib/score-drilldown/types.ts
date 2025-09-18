@@ -4,7 +4,7 @@ export type Rule = {
   id: string;
   name: string;
   priority: Priority;
-  signal: "traces" | "metrics" | "logs";
+  signal: "resources" | "spans" | "metrics" | "logs" | "sdk";
   group: string;
   maxPoints?: number;
   specUrl?: string;
@@ -25,22 +25,24 @@ export type ScoreResult = {
   maxScore: number;
   magnitudes: Map<string, number>;
   breakdown: {
-    critical: { enabled: number; total: number; points: number };
-    important: { enabled: number; total: number; points: number };
-    normal: { enabled: number; total: number; points: number };
-    low: { enabled: number; total: number; points: number };
+    critical: { satisfied: number; total: number; points: number };
+    important: { satisfied: number; total: number; points: number };
+    normal: { satisfied: number; total: number; points: number };
+    low: { satisfied: number; total: number; points: number };
   };
 };
 
 export type DrilldownResult = {
   score: ScoreResult;
   rulesBySignal: {
-    traces: Rule[];
+    resources: Rule[];
+    spans: Rule[];
     metrics: Rule[];
     logs: Rule[];
+    sdk: Rule[];
   };
   rulesByGroup: Map<string, Rule[]>;
-  topImpactDisabledRules: Rule[];
-  enabledRules: Rule[];
-  disabledRules: Rule[];
+  topImpactViolatedRules: Rule[];
+  satisfiedRules: Rule[];
+  violatedRules: Rule[];
 };
