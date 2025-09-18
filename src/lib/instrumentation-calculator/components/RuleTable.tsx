@@ -125,7 +125,7 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
   const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
 
   const filterAndSortRules = (rulesArray: Rule[]) => {
-    let filtered = rulesArray.filter(rule => {
+    const filtered = rulesArray.filter(rule => {
       const matchesSearch = searchTerm === "" ||
         rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         rule.id.toLowerCase().includes(searchTerm.toLowerCase());

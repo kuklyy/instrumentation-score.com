@@ -13,6 +13,13 @@ export function parseRuleContent(content: string, filename: string): Rule | null
     let rationale = '';
     let target = '';
     let impact = '';
+    let criteria = '';
+
+    // Extract criteria section if it exists
+    const criteriaStart = content.indexOf('## Criteria') || content.indexOf('**Criteria:**');
+    if (criteriaStart !== -1) {
+      criteria = content.substring(criteriaStart);
+    }
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -84,6 +91,8 @@ export function parseRuleContent(content: string, filename: string): Rule | null
       signal,
       group,
       rationale,
+      criteria,
+      markdownContent: content,
       maxPoints: 1
     };
   } catch (error) {

@@ -8,6 +8,42 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Search, X, ArrowUpDown, Info } from 'lucide-react';
 import { InstrumentationScoreCalculator } from '../lib/calculator';
 import type { Rule as SpecRule } from '../lib/types';
+import { RuleDetailsDialog } from '@/components/RuleDetailsDialog';
+
+interface FilterTabsProps {
+  activeFilter: string;
+  setActiveFilter: (filter: string) => void;
+  ruleCounts: Record<string, number>;
+  priorityColors: Record<string, string>;
+}
+
+const FilterTabs = React.memo(({ activeFilter, setActiveFilter, ruleCounts, priorityColors }: FilterTabsProps) => (
+  <div className="flex flex-wrap gap-2">
+    <Button
+      variant={activeFilter === "all" ? "default" : "outline"}
+      size="sm"
+      onClick={() => setActiveFilter("all")}
+      className="text-xs"
+    >
+      All ({ruleCounts.all})
+    </Button>
+    {Object.keys(priorityColors).map((priority) => (
+      <Button
+        key={priority}
+        variant={activeFilter === priority ? "default" : "outline"}
+        size="sm"
+        onClick={() => setActiveFilter(priority)}
+        className={`text-xs ${
+          activeFilter === priority
+            ? priorityColors[priority as keyof typeof priorityColors]
+            : "hover:bg-muted"
+        }`}
+      >
+        {priority} ({ruleCounts[priority as keyof typeof ruleCounts]})
+      </Button>
+    ))}
+  </div>
+));
 
 // Adapter interface for UI display
 interface Rule {
@@ -85,6 +121,10 @@ export function InstrumentationCalculator({
     return initialEnabled;
   });
 
+  // Modal state for rule details
+  const [selectedRule, setSelectedRule] = useState<SpecRule | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const specInfo = calculator.getSpecInfo();
   const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
 
@@ -158,7 +198,7 @@ export function InstrumentationCalculator({
 
   // Filter and sort rules
   const filteredRules = useMemo(() => {
-    let filtered = rules.filter(rule => {
+    const filtered = rules.filter(rule => {
       const matchesSearch = searchQuery === "" ||
         rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         rule.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -207,25 +247,30 @@ export function InstrumentationCalculator({
     return groups;
   }, [filteredRules]);
 
-  const handleRuleToggle = (ruleId: string) => {
-    setEnabledRules(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(ruleId)) {
-        newSet.delete(ruleId);
-      } else {
-        newSet.add(ruleId);
-      }
-      return newSet;
-    });
+  // TEMPORARILY DISABLED - no rule toggling allowed
+  // const handleRuleToggle = (ruleId: string) => {
+  //   setEnabledRules(prev => {
+  //     const newSet = new Set(prev);
+  //     if (newSet.has(ruleId)) {
+  //       newSet.delete(ruleId);
+  //     } else {
+  //       newSet.add(ruleId);
+  //     }
+  //     return newSet;
+  //   });
+  // };
+
+  const handleShowRuleDetails = (rule: SpecRule) => {
+    setSelectedRule(rule);
+    setIsDialogOpen(true);
   };
 
   const RuleItem = ({ rule }: { rule: Rule }) => {
     return (
       <div
-        className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all cursor-pointer border-l-4 ${
+        className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all border-l-4 ${
           rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
         }`}
-        onClick={() => handleRuleToggle(rule.id)}
       >
         <div className="flex-1 space-y-2">
           <div className="flex items-center space-x-3">
@@ -235,7 +280,6 @@ export function InstrumentationCalculator({
             </code>
           </div>
 
-          <p className="text-sm text-muted-foreground">{rule.description}</p>
 
           <div className="flex items-center space-x-3">
             <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
@@ -255,60 +299,24 @@ export function InstrumentationCalculator({
         </div>
 
         <div className="ml-4 flex items-center space-x-2">
-          {rule.specRule.rationale && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-                  <Info className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-sm">
-                <div className="space-y-2">
-                  <div className="font-medium">{rule.name}</div>
-                  <div className="text-sm">{rule.specRule.rationale}</div>
-                  {rule.specRule.specUrl && (
-                    <div className="text-xs text-blue-400">
-                      <a href={rule.specRule.specUrl} target="_blank" rel="noopener noreferrer">
-                        View in specification →
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground z-10 relative"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleShowRuleDetails(rule.specRule);
+            }}
+            title="View rule details and description"
+          >
+            <Info className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     );
   };
 
-  const FilterTabs = () => (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant={activeFilter === "all" ? "default" : "outline"}
-        size="sm"
-        onClick={() => setActiveFilter("all")}
-        className="text-xs"
-      >
-        All ({stats.ruleCounts.all})
-      </Button>
-      {Object.keys(priorityColors).map((priority) => (
-        <Button
-          key={priority}
-          variant={activeFilter === priority ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActiveFilter(priority)}
-          className={`text-xs ${
-            activeFilter === priority
-              ? priorityColors[priority as keyof typeof priorityColors]
-              : "hover:bg-muted"
-          }`}
-        >
-          {priority} ({stats.ruleCounts[priority as keyof typeof stats.ruleCounts]})
-        </Button>
-      ))}
-    </div>
-  );
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -395,7 +403,12 @@ export function InstrumentationCalculator({
                 {/* Second Row: Priority Filter and Sorting */}
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                   <div className="flex-1">
-                    <FilterTabs />
+                    <FilterTabs
+                      activeFilter={activeFilter}
+                      setActiveFilter={setActiveFilter}
+                      ruleCounts={stats.ruleCounts}
+                      priorityColors={priorityColors}
+                    />
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -448,6 +461,13 @@ export function InstrumentationCalculator({
           </Card>
         </div>
       </div>
+
+      {/* Rule Details Dialog */}
+      <RuleDetailsDialog
+        rule={selectedRule}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
     </div>
   );
 }
