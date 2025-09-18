@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,13 +22,13 @@ const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filt
   const rulesByGroup = getRulesByGroup(filteredRules);
 
   const RuleRow = ({ rule }: { rule: Rule }) => (
-    <div className="flex items-center justify-between p-4 border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50 transition-colors">
+    <div
+      className={`flex items-center justify-between p-4 border-b border-slate-700 last:border-b-0 hover:bg-slate-700/50 transition-all cursor-pointer border-l-4 ${
+        rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
+      }`}
+      onClick={() => onToggleRule(rule.id)}
+    >
       <div className="flex items-center space-x-3 flex-1">
-        <Checkbox
-          checked={rule.enabled}
-          onCheckedChange={() => onToggleRule(rule.id)}
-          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-white truncate">{rule.name}</span>

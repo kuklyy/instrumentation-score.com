@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -222,7 +221,12 @@ export function InstrumentationCalculator({
 
   const RuleItem = ({ rule }: { rule: Rule }) => {
     return (
-      <div className="flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-colors">
+      <div
+        className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all cursor-pointer border-l-4 ${
+          rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
+        }`}
+        onClick={() => handleRuleToggle(rule.id)}
+      >
         <div className="flex-1 space-y-2">
           <div className="flex items-center space-x-3">
             <h4 className="font-medium text-foreground">{rule.name}</h4>
@@ -273,10 +277,6 @@ export function InstrumentationCalculator({
               </TooltipContent>
             </Tooltip>
           )}
-          <Checkbox
-            checked={rule.enabled}
-            onCheckedChange={() => handleRuleToggle(rule.id)}
-          />
         </div>
       </div>
     );

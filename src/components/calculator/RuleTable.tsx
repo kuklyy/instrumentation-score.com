@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,13 +78,12 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
     const scoreContribution = isEnabled ? magnitude : 0;
 
     return (
-      <div className="flex items-center gap-4 p-3 border-b border-slate-700 hover:bg-slate-800/50 transition-colors">
-        {/* Toggle Checkbox */}
-        <Checkbox
-          id={rule.id}
-          checked={isEnabled}
-          onCheckedChange={() => onToggleRule(rule.id)}
-        />
+      <div
+        className={`flex items-center gap-4 p-3 border-b border-slate-700 hover:bg-slate-800/50 transition-all cursor-pointer border-l-4 ${
+          isEnabled ? 'border-l-green-500' : 'border-l-red-500'
+        }`}
+        onClick={() => onToggleRule(rule.id)}
+      >
 
         {/* Rule Info */}
         <div className="flex-1 min-w-0">
