@@ -11,10 +11,10 @@ interface RuleMarkdownProps {
 }
 
 const priorityColors = {
-  critical: 'bg-critical text-critical-foreground',
-  important: 'bg-important text-important-foreground',
-  normal: 'bg-normal text-normal-foreground',
-  low: 'bg-low text-low-foreground',
+  critical: 'bg-critical text-critical-foreground border border-black/60',
+  important: 'bg-important text-important-foreground border border-black/60',
+  normal: 'bg-normal text-normal-foreground border border-black/60',
+  low: 'bg-low text-low-foreground border border-black/60',
 };
 
 const signalColors = {

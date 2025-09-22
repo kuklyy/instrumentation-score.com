@@ -24,25 +24,25 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
     {
       key: 'critical' as keyof PriorityData,
       label: 'Critical',
-      className: 'bg-critical hover:bg-critical/90 text-critical-foreground border-transparent',
+      className: 'bg-critical hover:bg-critical/90 text-critical-foreground border border-black/60',
       weight: 'x40'
     },
     {
       key: 'important' as keyof PriorityData,
       label: 'Important',
-      className: 'bg-important hover:bg-important/90 text-important-foreground border-transparent',
+      className: 'bg-important hover:bg-important/90 text-important-foreground border border-black/60',
       weight: 'x30'
     },
     {
       key: 'normal' as keyof PriorityData,
       label: 'Normal',
-      className: 'bg-normal hover:bg-normal/90 text-normal-foreground border-transparent',
+      className: 'bg-normal hover:bg-normal/90 text-normal-foreground border border-black/60',
       weight: 'x20'
     },
     {
       key: 'low' as keyof PriorityData,
       label: 'Low',
-      className: 'bg-low hover:bg-low/90 text-low-foreground border-transparent',
+      className: 'bg-low hover:bg-low/90 text-low-foreground border border-black/60',
       weight: 'x10'
     },
   ];

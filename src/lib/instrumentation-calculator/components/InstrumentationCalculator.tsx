@@ -82,7 +82,7 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails, onRuleTo
 
         <div className="flex items-center space-x-3">
           <div className={`w-3 h-3 rounded-full ${rule.enabled ? 'bg-green-500' : 'bg-red-500'} flex-shrink-0`} />
-          <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
+          <Badge className={`${priorityColors[rule.priority]} text-white border border-black/60 text-xs px-2 py-1`}>
             {rule.priority}
           </Badge>
           <Badge variant="outline" className="text-xs">

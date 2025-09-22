@@ -65,7 +65,7 @@ const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filt
                 )
               )}
             </span>
-            <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
+            <Badge className={`${priorityColors[rule.priority]} text-white border border-black/60 text-xs px-2 py-1`}>
               {rule.priority}
             </Badge>
             <Tooltip>
@@ -234,7 +234,7 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
 
         {/* Priority Badge */}
         <Badge
-          className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}
+          className={`${priorityColors[rule.priority]} text-white border border-black/60 text-xs px-2 py-1`}
         >
           {rule.priority}
         </Badge>
