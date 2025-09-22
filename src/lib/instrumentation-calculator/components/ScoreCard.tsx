@@ -79,7 +79,7 @@ export function ScoreCard({ score, enabledCount, totalCount, priorityWeights }: 
                       </span>
                     </div>
                     <span className="text-slate-300">
-                      {data.points.toFixed(1)}pts
+                      {Math.round(data.points)}pts
                     </span>
                   </div>
                   <div className="relative h-2 bg-slate-700 rounded-full overflow-hidden">

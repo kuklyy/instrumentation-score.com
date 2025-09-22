@@ -68,7 +68,7 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
                   </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">
-                  {item.points.toFixed(1)}pts
+                  {Math.round(item.points)}pts
                 </div>
               </div>
             );

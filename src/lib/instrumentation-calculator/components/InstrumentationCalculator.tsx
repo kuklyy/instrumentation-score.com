@@ -90,7 +90,7 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails, onRuleTo
           </Badge>
           <span className="text-sm text-muted-foreground">—</span>
           <span className="text-sm font-medium text-foreground">
-            {rule.impact.toFixed(1)}pts
+            {Math.round(rule.impact)}pts
           </span>
         </div>
       </div>
@@ -263,10 +263,10 @@ export function InstrumentationCalculator({
       enabledRules: 0,
       totalRules: 0,
       priorityBreakdown: {
-        critical: { count: 0, points: 0 },
-        important: { count: 0, points: 0 },
-        normal: { count: 0, points: 0 },
-        low: { count: 0, points: 0 },
+        critical: { count: 0, points: 0, maxPoints: 0 },
+        important: { count: 0, points: 0, maxPoints: 0 },
+        normal: { count: 0, points: 0, maxPoints: 0 },
+        low: { count: 0, points: 0, maxPoints: 0 },
       },
       ruleCounts: { all: 0, critical: 0, important: 0, normal: 0, low: 0 },
       magnitudes: new Map(),
@@ -275,12 +275,19 @@ export function InstrumentationCalculator({
     const enabledRulesList = rules.filter(rule => rule.enabled);
 
     const priorityBreakdown = {
-      critical: { count: 0, points: 0 },
-      important: { count: 0, points: 0 },
-      normal: { count: 0, points: 0 },
-      low: { count: 0, points: 0 },
+      critical: { count: 0, points: 0, maxPoints: 0 },
+      important: { count: 0, points: 0, maxPoints: 0 },
+      normal: { count: 0, points: 0, maxPoints: 0 },
+      low: { count: 0, points: 0, maxPoints: 0 },
     };
 
+    // First pass: calculate max points for each priority
+    calculator.getAllRules().forEach(specRule => {
+      const maxContribution = scoreResult.magnitudes.get(specRule.id) || 0;
+      priorityBreakdown[specRule.priority].maxPoints += maxContribution;
+    });
+
+    // Second pass: calculate current points for enabled rules
     calculator.getAllRules().forEach(specRule => {
       if (enabledRules.has(specRule.id)) {
         const contribution = scoreResult.magnitudes.get(specRule.id) || 0;

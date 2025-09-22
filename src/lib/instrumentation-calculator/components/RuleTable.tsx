@@ -65,7 +65,7 @@ const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filt
             </Tooltip>
           </div>
           <div className="text-sm text-slate-400">
-            {rule.ruleCode} • Impact: {(magnitudes.get(rule.id) || 0).toFixed(1)}
+            {rule.ruleCode} • Impact: {Math.round(magnitudes.get(rule.id) || 0)}
           </div>
         </div>
       </div>
@@ -225,10 +225,10 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
         <div className="w-24 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="text-slate-400">
-              {isEnabled ? `+${scoreContribution.toFixed(1)}` : "—"}
+              {isEnabled ? `+${Math.round(scoreContribution)}` : "—"}
             </span>
             <span className="text-slate-400">
-              {magnitude.toFixed(1)}pts
+              {Math.round(magnitude)}pts
             </span>
           </div>
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">

@@ -3,10 +3,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 interface PriorityData {
-  critical: { count: number; points: number };
-  important: { count: number; points: number };
-  normal: { count: number; points: number };
-  low: { count: number; points: number };
+  critical: { count: number; points: number; maxPoints: number };
+  important: { count: number; points: number; maxPoints: number };
+  normal: { count: number; points: number; maxPoints: number };
+  low: { count: number; points: number; maxPoints: number };
 }
 
 interface PriorityBreakdownProps {
@@ -68,7 +68,7 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
                   </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">
-                  {item.points.toFixed(1)}pts
+                  {Math.round(item.points)}/{Math.round(item.maxPoints)}pts
                 </div>
               </div>
             );
