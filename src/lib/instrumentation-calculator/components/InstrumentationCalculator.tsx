@@ -231,10 +231,10 @@ export function InstrumentationCalculator({
   // Pre-calculate all memoized values to avoid hooks order violations
   const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
   const priorityColors = {
-    critical: "bg-red-500 hover:bg-red-600",
-    important: "bg-amber-500 hover:bg-amber-600",
-    normal: "bg-teal-500 hover:bg-teal-600",
-    low: "bg-slate-500 hover:bg-slate-600"
+    critical: "bg-critical hover:bg-critical/90",
+    important: "bg-important hover:bg-important/90",
+    normal: "bg-normal hover:bg-normal/90",
+    low: "bg-low hover:bg-low/90"
   };
 
   // Convert spec rules to UI format

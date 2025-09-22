@@ -6,8 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Info, Search, X, ArrowUpDown } from "lucide-react";
 import { type Rule, type Priority } from "../../score-drilldown/types";
+
+// Utility functions
+function getRulesBySignal(rules: Rule[]) {
+  return {
+    resources: rules.filter(r => r.signal === "resources"),
+    spans: rules.filter(r => r.signal === "spans"),
+    metrics: rules.filter(r => r.signal === "metrics"),
+    logs: rules.filter(r => r.signal === "logs"),
+    sdk: rules.filter(r => r.signal === "sdk")
+  };
+}
+
+function getRulesByGroup(rules: Rule[]) {
+  const groups = new Map<string, Rule[]>();
+  for (const rule of rules) {
+    if (!groups.has(rule.group)) {
+      groups.set(rule.group, []);
+    }
+    groups.get(rule.group)!.push(rule);
+  }
+  return groups;
+}
 
 interface SignalTabProps {
   signal: string;
@@ -42,7 +65,7 @@ const SignalTab = React.memo<SignalTabProps>(({ signal, rules: signalRules, filt
                 )
               )}
             </span>
-            <Badge variant={rule.priority as "critical" | "important" | "normal" | "low"}>
+            <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
               {rule.priority}
             </Badge>
             <Tooltip>
@@ -128,10 +151,10 @@ export function RuleTable({ rules, enabledRuleIds, onToggleRule, magnitudes, pri
   }), [rulesBySignal, searchTerm, priorityFilter, signalFilter, sortBy, sortOrder]);
 
   const priorityColors = {
-    critical: "bg-red-500 hover:bg-red-600",
-    important: "bg-amber-500 hover:bg-amber-600",
-    normal: "bg-teal-500 hover:bg-teal-600",
-    low: "bg-slate-500 hover:bg-slate-600"
+    critical: "bg-critical hover:bg-critical/90",
+    important: "bg-important hover:bg-important/90",
+    normal: "bg-normal hover:bg-normal/90",
+    low: "bg-low hover:bg-low/90"
   };
 
   const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };

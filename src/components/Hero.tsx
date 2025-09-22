@@ -51,9 +51,11 @@ export const Hero = () => {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
-            <Button variant="outline" size="lg" className="border-slate-600 text-white hover:bg-slate-800 px-8 py-4 text-lg">
-              <Activity className="w-5 h-5 mr-2" />
-              View Specification
+            <Button variant="outline" size="lg" className="border-slate-600 text-white hover:bg-slate-800 px-8 py-4 text-lg" asChild>
+              <a href="https://github.com/instrumentation-score/spec" target="_blank" rel="noopener noreferrer">
+                <Activity className="w-5 h-5 mr-2" />
+                View Specification
+              </a>
             </Button>
           </div>
 

@@ -27,17 +27,17 @@
     --accent: 217 91% 55%;
     --accent-foreground: 220 10% 95%;
 
-    /* Priority colors - matching rule list badges */
-    --critical: 0 84% 60%;
+    /* Priority colors - darkened for better contrast with white text (≥4.5:1) */
+    --critical: 0 70% 45%;
     --critical-foreground: 0 0% 100%;
 
-    --important: 45 93% 58%;
+    --important: 34 100% 45%;
     --important-foreground: 0 0% 100%;
 
-    --normal: 173 80% 40%;
+    --normal: 173 65% 32%;
     --normal-foreground: 0 0% 100%;
 
-    --low: 215 16% 47%;
+    --low: 213 76% 38%;
     --low-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
