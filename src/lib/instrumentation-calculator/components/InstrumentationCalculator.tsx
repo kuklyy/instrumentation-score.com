@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Search, X, ArrowUpDown, Info } from 'lucide-react';
 import { InstrumentationScoreCalculator } from '../../score-drilldown/calculator';
 import { loadOfficialSpec } from '../../score-drilldown/spec-parser';
-import type { Rule as SpecRule } from '../../score-drilldown/types';
+import type { Rule as SpecRule, ScoreResult } from '../../score-drilldown/types';
 import { RuleDetailsDialog } from '@/components/RuleDetailsDialog';
 
 interface FilterTabsProps {
@@ -86,7 +86,7 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleIt
           </Badge>
           <span className="text-sm text-muted-foreground">—</span>
           <span className="text-sm font-medium text-foreground">
-            {(magnitudes?.get(rule.id) || 0).toFixed(1)}pts
+            {rule.impact.toFixed(1)}pts
           </span>
         </div>
       </div>
@@ -179,7 +179,7 @@ export function InstrumentationCalculator({
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [enabledRules, setEnabledRules] = useState<Set<string>>(new Set());
-  const [scoreResult, setScoreResult] = useState<any>(null);
+  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
 
   // Modal state for rule details
   const [selectedRule, setSelectedRule] = useState<SpecRule | null>(null);
@@ -198,7 +198,7 @@ export function InstrumentationCalculator({
         // Initialize enabled rules
         const initialEnabled = new Set<string>();
         calc.getAllRules().forEach(rule => {
-          if (calc.isRuleEnabled(rule.id)) {
+          if (calc.isRuleSatisfied(rule.id)) {
             initialEnabled.add(rule.id);
           }
         });
@@ -218,8 +218,8 @@ export function InstrumentationCalculator({
   useEffect(() => {
     if (!calculator) return;
 
-    calculator.disableAllRules();
-    enabledRules.forEach(ruleId => calculator.enableRule(ruleId));
+    calculator.setAllRulesViolated();
+    enabledRules.forEach(ruleId => calculator.setRuleSatisfied(ruleId));
     const result = calculator.calculateScore();
     setScoreResult(result);
   }, [calculator, enabledRules]);
@@ -416,7 +416,7 @@ export function InstrumentationCalculator({
       </div>
 
       {/* Score and Breakdown (if enabled and components provided) */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-4 gap-6">
         {(showScoreDisplay || showPriorityBreakdown) && (ScoreDisplayComponent || PriorityBreakdownComponent) && (
           <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-6 lg:self-start">
             {showScoreDisplay && ScoreDisplayComponent && (
@@ -444,8 +444,8 @@ export function InstrumentationCalculator({
         {/* Rules Section */}
         <div className={`${
           (showScoreDisplay || showPriorityBreakdown) && (ScoreDisplayComponent || PriorityBreakdownComponent)
-            ? "lg:col-span-2"
-            : "lg:col-span-3"
+            ? "lg:col-span-3"
+            : "lg:col-span-4"
         }`}>
           <Card className="bg-card border-border/50">
             <CardContent className="p-6 space-y-6">
