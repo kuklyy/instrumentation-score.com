@@ -50,14 +50,17 @@ interface RuleItemProps {
   rule: Rule;
   priorityColors: Record<string, string>;
   onShowRuleDetails: (rule: SpecRule) => void;
+  onRuleToggle: (ruleId: string) => void;
 }
 
-const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleItemProps) => {
+const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails, onRuleToggle }: RuleItemProps) => {
   return (
     <div
-      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border transition-all border-l-4 ${
-        rule.enabled ? 'border-l-green-500' : 'border-l-red-500'
+      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border hover:shadow-sm transition-all border-l-4 cursor-pointer ${
+        rule.enabled ? 'border-l-green-500 hover:border-l-green-600' : 'border-l-red-500 hover:border-l-red-600'
       }`}
+      onClick={() => onRuleToggle(rule.id)}
+      title={`Click to ${rule.enabled ? 'disable' : 'enable'} this rule`}
     >
       <div className="flex-1 space-y-2">
         <div className="flex items-center space-x-3">
@@ -78,6 +81,7 @@ const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails }: RuleIt
         </div>
 
         <div className="flex items-center space-x-3">
+          <div className={`w-3 h-3 rounded-full ${rule.enabled ? 'bg-green-500' : 'bg-red-500'} flex-shrink-0`} />
           <Badge className={`${priorityColors[rule.priority]} text-white border-transparent text-xs px-2 py-1`}>
             {rule.priority}
           </Badge>
@@ -387,18 +391,17 @@ export function InstrumentationCalculator({
 
   const specInfo = calculator.getSpecInfo();
 
-  // TEMPORARILY DISABLED - no rule toggling allowed
-  // const handleRuleToggle = (ruleId: string) => {
-  //   setEnabledRules(prev => {
-  //     const newSet = new Set(prev);
-  //     if (newSet.has(ruleId)) {
-  //       newSet.delete(ruleId);
-  //     } else {
-  //       newSet.add(ruleId);
-  //     }
-  //     return newSet;
-  //   });
-  // };
+  const handleRuleToggle = (ruleId: string) => {
+    setEnabledRules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(ruleId)) {
+        newSet.delete(ruleId);
+      } else {
+        newSet.add(ruleId);
+      }
+      return newSet;
+    });
+  };
 
   const handleShowRuleDetails = (rule: SpecRule) => {
     setSelectedRule(rule);
@@ -541,6 +544,7 @@ export function InstrumentationCalculator({
                           rule={rule}
                           priorityColors={priorityColors}
                           onShowRuleDetails={handleShowRuleDetails}
+                          onRuleToggle={handleRuleToggle}
                         />
                       ))}
                     </div>
