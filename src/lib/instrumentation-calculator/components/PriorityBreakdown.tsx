@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface PriorityData {
   critical: { count: number; points: number; maxPoints: number };
@@ -24,25 +24,25 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
     {
       key: 'critical' as keyof PriorityData,
       label: 'Critical',
-      variant: 'critical' as const,
+      className: 'bg-red-500 hover:bg-red-600 text-white border-transparent',
       weight: 'x40'
     },
     {
       key: 'important' as keyof PriorityData,
       label: 'Important',
-      variant: 'important' as const,
+      className: 'bg-amber-500 hover:bg-amber-600 text-white border-transparent',
       weight: 'x30'
     },
     {
       key: 'normal' as keyof PriorityData,
       label: 'Normal',
-      variant: 'normal' as const,
+      className: 'bg-teal-500 hover:bg-teal-600 text-white border-transparent',
       weight: 'x20'
     },
     {
       key: 'low' as keyof PriorityData,
       label: 'Low',
-      variant: 'low' as const,
+      className: 'bg-slate-500 hover:bg-slate-600 text-white border-transparent',
       weight: 'x10'
     },
   ];
@@ -55,14 +55,14 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
         </h3>
 
         <div className="space-y-3">
-          {priorityItems.map(({ key, label, variant, weight }) => {
+          {priorityItems.map(({ key, label, className, weight }) => {
             const item = breakdown[key];
             return (
               <div key={key} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Button variant={variant} size="sm" disabled>
+                  <Badge className={`${className} text-xs px-2 py-1`}>
                     {label}
-                  </Button>
+                  </Badge>
                   <span className="text-sm text-muted-foreground">
                     {item.count}/{totalCounts?.[key] || item.count} rules
                   </span>
