@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { InstrumentationScoreCalculator } from './calculator';
 
 describe('InstrumentationScoreCalculator', () => {
-  it('should calculate score in 10-100 range', () => {
+  it('should calculate score in 0-100 range', () => {
     const calculator = new InstrumentationScoreCalculator();
 
     // Test with all rules satisfied (should be 100)
@@ -10,10 +10,10 @@ describe('InstrumentationScoreCalculator', () => {
     const allSatisfied = calculator.calculateScore();
     expect(allSatisfied.total).toBe(100);
 
-    // Test with no rules satisfied (should be 10)
+    // Test with no rules satisfied (should be 0)
     calculator.setAllRulesViolated();
     const noneSatisfied = calculator.calculateScore();
-    expect(noneSatisfied.total).toBe(10);
+    expect(noneSatisfied.total).toBe(0);
 
     // Test with partial rules satisfied
     const allRules = calculator.getAllRules();
@@ -23,7 +23,7 @@ describe('InstrumentationScoreCalculator', () => {
       calculator.setRuleSatisfied(allRules[i].id);
     }
     const partialSatisfied = calculator.calculateScore();
-    expect(partialSatisfied.total).toBeGreaterThanOrEqual(10);
+    expect(partialSatisfied.total).toBeGreaterThanOrEqual(0);
     expect(partialSatisfied.total).toBeLessThanOrEqual(100);
   });
 
@@ -33,7 +33,7 @@ describe('InstrumentationScoreCalculator', () => {
     // Minimum boundary
     calculator.setAllRulesViolated();
     const minScore = calculator.calculateScore();
-    expect(minScore.total).toBe(10);
+    expect(minScore.total).toBe(0);
 
     // Maximum boundary
     calculator.setAllRulesSatisfied();

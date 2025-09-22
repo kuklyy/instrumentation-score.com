@@ -14,7 +14,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   rulesEnabled,
   totalRules,
 }) => {
-  // Score is already in 10-100 range from calculator
+  // Score is already in 0-100 range from calculator
   const instrumentationScore = score;
 
   const getScoreCategory = (score: number) => {
@@ -41,7 +41,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
         <div className="space-y-4">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">10</span>
+            <span className="text-muted-foreground">0</span>
             <span className={`font-medium ${category.color}`}>
               {category.label}
             </span>
@@ -51,7 +51,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           <div className="w-full bg-muted rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(instrumentationScore - 10) / 90 * 100}%` }}
+              style={{ width: `${instrumentationScore}%` }}
             />
           </div>
         </div>

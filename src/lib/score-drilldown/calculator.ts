@@ -93,8 +93,8 @@ export class InstrumentationScoreCalculator {
   /**
    * Calculate the instrumentation score based on currently satisfied rules
    * This follows the official formula from the spec:
-   * Score = (Σ(Pi × Wi) / Σ(Ti × Wi)) × 90 + 10
-   * Range is 10-100 as per official specification
+   * Score = (Σ(Pi × Wi) / Σ(Ti × Wi)) × 100
+   * Range is 0-100 as per updated specification
    */
   calculateScore(): ScoreResult {
     const w = this.spec.priorityWeights;
@@ -112,16 +112,16 @@ export class InstrumentationScoreCalculator {
       0
     );
 
-    // Calculate final score (10-100 range as per spec)
-    // Formula: (percentage * 90) + 10 to map 0-100% to 10-100 score
+    // Calculate final score (0-100 range as per spec)
+    // Formula: percentage * 100 to map 0-100% to 0-100 score
     const percentage = maxScore === 0 ? 0 : raw / maxScore;
-    const total = Math.round((percentage * 90) + 10);
+    const total = Math.round(percentage * 100);
 
     // Calculate magnitude (contribution) per rule
     const magnitudes = new Map<string, number>();
     for (const r of this.spec.rules) {
       const pts = w[r.priority] * (r.maxPoints || 1);
-      magnitudes.set(r.id, maxScore === 0 ? 0 : (90 * pts) / maxScore);
+      magnitudes.set(r.id, maxScore === 0 ? 0 : (100 * pts) / maxScore);
     }
 
     // Calculate breakdown by priority
