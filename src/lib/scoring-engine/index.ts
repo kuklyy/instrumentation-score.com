@@ -10,5 +10,5 @@ export type {
   DrilldownResult
 } from './types';
 
-// Export the official spec data
-export { default as officialSpec } from './official-spec.json';
+// Export spec loader
+export { loadOfficialSpec, parseRuleContent } from './spec-parser';

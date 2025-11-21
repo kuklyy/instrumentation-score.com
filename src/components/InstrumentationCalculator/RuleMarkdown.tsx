@@ -3,27 +3,13 @@ import ReactMarkdown from 'react-markdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Rule } from '@/lib/score-drilldown/types';
+import { Rule } from '@/lib/scoring-engine/types';
+import { PRIORITY_BADGE_COLORS, SIGNAL_COLORS } from './constants';
 
 interface RuleMarkdownProps {
   rule: Rule;
   className?: string;
 }
-
-const priorityColors = {
-  critical: 'bg-critical text-critical-foreground border border-black/60',
-  important: 'bg-important text-important-foreground border border-black/60',
-  normal: 'bg-normal text-normal-foreground border border-black/60',
-  low: 'bg-low text-low-foreground border border-black/60',
-};
-
-const signalColors = {
-  resources: 'bg-blue-500 text-white',
-  spans: 'bg-purple-500 text-white',
-  metrics: 'bg-green-500 text-white',
-  logs: 'bg-yellow-500 text-black',
-  sdk: 'bg-orange-500 text-white',
-};
 
 export function RuleMarkdown({ rule, className }: RuleMarkdownProps) {
   return (
@@ -32,11 +18,11 @@ export function RuleMarkdown({ rule, className }: RuleMarkdownProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">{rule.id}</CardTitle>
           <div className="flex gap-2">
-            <Badge className={priorityColors[rule.priority] ?? 'bg-gray-500 text-white'}>
+            <Badge className={PRIORITY_BADGE_COLORS[rule.priority] ?? 'bg-gray-500 text-white'}>
               {rule.priority}
             </Badge>
-            <Badge className={signalColors[rule.signal] ?? 'bg-gray-500 text-white'}>
-              {rule.group}
+            <Badge className={SIGNAL_COLORS[rule.signal] ?? 'bg-gray-500 text-white'}>
+              {rule.signal}
             </Badge>
           </div>
         </div>
@@ -128,5 +114,3 @@ export function RuleMarkdown({ rule, className }: RuleMarkdownProps) {
     </Card>
   );
 }
-
-export default RuleMarkdown;

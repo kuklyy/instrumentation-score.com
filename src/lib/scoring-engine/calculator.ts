@@ -1,13 +1,11 @@
 import { Rule, Priority, ScoreResult, DrilldownResult, Spec } from './types';
-import officialSpec from './official-spec.json';
 
 export class InstrumentationScoreCalculator {
   private spec: Spec;
   private satisfiedRules: Set<string>;
 
-  constructor(customSpec?: Spec) {
-    // Use official spec by default, or allow custom spec
-    this.spec = customSpec || (officialSpec as Spec);
+  constructor(spec: Spec) {
+    this.spec = spec;
     // Start with all rules satisfied by default
     this.satisfiedRules = new Set(this.spec.rules.map(r => r.id));
   }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
+import { getScoreCategory } from './constants';
 
 interface ScoreDisplayProps {
   score: number;
@@ -16,14 +17,6 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 }) => {
   // Score is already in 0-100 range from calculator
   const instrumentationScore = score;
-
-  const getScoreCategory = (score: number) => {
-    if (score >= 90) return { label: 'Excellent', color: 'text-normal' };
-    if (score >= 75) return { label: 'Good', color: 'text-primary' };
-    if (score >= 50) return { label: 'Needs Improvement', color: 'text-important' };
-    return { label: 'Poor', color: 'text-critical' };
-  };
-
   const category = getScoreCategory(instrumentationScore);
 
   return (

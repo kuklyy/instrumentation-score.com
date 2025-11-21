@@ -1,12 +1,21 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PRIORITY_BADGE_COLORS, PRIORITY_WEIGHTS } from './constants';
+import type { Priority } from '@/lib/scoring-engine/types';
+
+interface PriorityItemData {
+  count: number;
+  points: number;
+  maxPoints?: number;
+}
 
 interface PriorityData {
-  critical: { count: number; points: number; maxPoints: number };
-  important: { count: number; points: number; maxPoints: number };
-  normal: { count: number; points: number; maxPoints: number };
-  low: { count: number; points: number; maxPoints: number };
+  critical: PriorityItemData;
+  important: PriorityItemData;
+  normal: PriorityItemData;
+  low: PriorityItemData;
 }
 
 interface PriorityBreakdownProps {
@@ -17,33 +26,39 @@ interface PriorityBreakdownProps {
     normal: number;
     low: number;
   };
+  /**
+   * Display variant:
+   * - 'badge': Uses Badge component with colors (default, more informative)
+   * - 'button': Uses Button component with variants (cleaner look)
+   */
+  variant?: 'badge' | 'button';
 }
 
-export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown, totalCounts }) => {
+export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({
+  breakdown,
+  totalCounts,
+  variant = 'badge'
+}) => {
   const priorityItems = [
     {
-      key: 'critical' as keyof PriorityData,
+      key: 'critical' as Priority,
       label: 'Critical',
-      className: 'bg-critical hover:bg-critical/90 text-critical-foreground border border-black/60',
-      weight: 'x40'
+      weight: `x${PRIORITY_WEIGHTS.critical}`
     },
     {
-      key: 'important' as keyof PriorityData,
+      key: 'important' as Priority,
       label: 'Important',
-      className: 'bg-important hover:bg-important/90 text-important-foreground border border-black/60',
-      weight: 'x30'
+      weight: `x${PRIORITY_WEIGHTS.important}`
     },
     {
-      key: 'normal' as keyof PriorityData,
+      key: 'normal' as Priority,
       label: 'Normal',
-      className: 'bg-normal hover:bg-normal/90 text-normal-foreground border border-black/60',
-      weight: 'x20'
+      weight: `x${PRIORITY_WEIGHTS.normal}`
     },
     {
-      key: 'low' as keyof PriorityData,
+      key: 'low' as Priority,
       label: 'Low',
-      className: 'bg-low hover:bg-low/90 text-low-foreground border border-black/60',
-      weight: 'x10'
+      weight: `x${PRIORITY_WEIGHTS.low}`
     },
   ];
 
@@ -55,20 +70,31 @@ export const PriorityBreakdown: React.FC<PriorityBreakdownProps> = ({ breakdown,
         </h3>
 
         <div className="space-y-3">
-          {priorityItems.map(({ key, label, className, weight }) => {
+          {priorityItems.map(({ key, label, weight }) => {
             const item = breakdown[key];
+            const showMaxPoints = item.maxPoints !== undefined;
+
             return (
               <div key={key} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Badge className={`${className} text-xs px-2 py-1`}>
-                    {label}
-                  </Badge>
+                  {variant === 'badge' ? (
+                    <Badge className={`${PRIORITY_BADGE_COLORS[key]} text-xs px-2 py-1`}>
+                      {label}
+                    </Badge>
+                  ) : (
+                    <Button variant={key} size="sm" disabled>
+                      {label}
+                    </Button>
+                  )}
                   <span className="text-sm text-muted-foreground">
                     {item.count}/{totalCounts?.[key] || item.count} rules
                   </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">
-                  {Math.round(item.points)}/{Math.round(item.maxPoints)}pts
+                  {showMaxPoints
+                    ? `${Math.round(item.points)}/${Math.round(item.maxPoints!)}pts`
+                    : `${Math.round(item.points)}pts`
+                  }
                 </div>
               </div>
             );

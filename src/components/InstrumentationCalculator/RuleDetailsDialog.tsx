@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Rule } from '@/lib/score-drilldown/types';
+import { Rule } from '@/lib/scoring-engine/types';
 import { RuleMarkdown } from './RuleMarkdown';
 
 interface RuleDetailsDialogProps {
@@ -28,5 +28,3 @@ export function RuleDetailsDialog({ rule, open, onOpenChange }: RuleDetailsDialo
     </Dialog>
   );
 }
-
-export default RuleDetailsDialog;

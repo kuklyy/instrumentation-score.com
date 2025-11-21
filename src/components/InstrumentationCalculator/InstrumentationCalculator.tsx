@@ -1,135 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Search, X, ArrowUpDown, Info } from 'lucide-react';
-import { InstrumentationScoreCalculator } from '../../score-drilldown/calculator';
-import { loadOfficialSpec } from '../../score-drilldown/spec-parser';
-import type { Rule as SpecRule, ScoreResult } from '../../score-drilldown/types';
-import { RuleDetailsDialog } from '@/components/RuleDetailsDialog';
-
-interface FilterTabsProps {
-  activeFilter: string;
-  setActiveFilter: (filter: string) => void;
-  ruleCounts: Record<string, number>;
-  priorityColors: Record<string, string>;
-}
-
-const FilterTabs = React.memo(({ activeFilter, setActiveFilter, ruleCounts, priorityColors }: FilterTabsProps) => (
-  <div className="flex flex-wrap gap-2">
-    <Button
-      variant={activeFilter === "all" ? "default" : "outline"}
-      size="sm"
-      onClick={() => setActiveFilter("all")}
-      className="text-xs"
-    >
-      All ({ruleCounts.all})
-    </Button>
-    {Object.keys(priorityColors).map((priority) => (
-      <Button
-        key={priority}
-        variant={activeFilter === priority ? "default" : "outline"}
-        size="sm"
-        onClick={() => setActiveFilter(priority)}
-        className={`text-xs ${
-          activeFilter === priority
-            ? priorityColors[priority as keyof typeof priorityColors]
-            : "hover:bg-muted"
-        }`}
-      >
-        {priority} ({ruleCounts[priority as keyof typeof ruleCounts]})
-      </Button>
-    ))}
-  </div>
-));
-
-interface RuleItemProps {
-  rule: Rule;
-  priorityColors: Record<string, string>;
-  onShowRuleDetails: (rule: SpecRule) => void;
-  onRuleToggle: (ruleId: string) => void;
-}
-
-const RuleItem = React.memo(({ rule, priorityColors, onShowRuleDetails, onRuleToggle }: RuleItemProps) => {
-  return (
-    <div
-      className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border hover:shadow-sm transition-all border-l-4 cursor-pointer ${
-        rule.enabled ? 'border-l-green-500 hover:border-l-green-600' : 'border-l-red-500 hover:border-l-red-600'
-      }`}
-      onClick={() => onRuleToggle(rule.id)}
-      title={`Click to ${rule.enabled ? 'disable' : 'enable'} this rule`}
-    >
-      <div className="flex-1 space-y-2">
-        <div className="flex items-center space-x-3">
-          <h4 className="font-medium text-foreground">
-            {rule.name.split(/(`[^`]*`)/).map((part, index) =>
-              part.startsWith('`') && part.endsWith('`') ? (
-                <code key={index} className="bg-muted px-1 py-0.5 rounded text-xs font-mono">
-                  {part.slice(1, -1)}
-                </code>
-              ) : (
-                part
-              )
-            )}
-          </h4>
-          <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
-            {rule.ruleCode}
-          </code>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <div className={`w-3 h-3 rounded-full ${rule.enabled ? 'bg-green-500' : 'bg-red-500'} flex-shrink-0`} />
-          <Badge className={`${priorityColors[rule.priority]} text-white border border-black/60 text-xs px-2 py-1`}>
-            {rule.priority}
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {rule.category}
-          </Badge>
-          <span className="text-sm text-muted-foreground">—</span>
-          <span className="text-sm font-medium text-foreground">
-            {Math.round(rule.impact)}pts
-          </span>
-        </div>
-      </div>
-
-      <div className="ml-4 flex items-center space-x-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground z-10 relative"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onShowRuleDetails(rule.specRule);
-          }}
-          title="View rule details and description"
-        >
-          <Info className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-});
-
-// Adapter interface for UI display
-interface Rule {
-  id: string;
-  name: string;
-  description: string;
-  priority: 'critical' | 'important' | 'normal' | 'low';
-  category: string;
-  signal: 'resources' | 'spans' | 'metrics' | 'logs' | 'sdk';
-  ruleCode: string;
-  impact: number;
-  enabled: boolean;
-  specRule: SpecRule;
-}
-
-type SortOption = "priority" | "name" | "category";
-type SortOrder = "asc" | "desc";
+import { Search, X, ArrowUpDown } from 'lucide-react';
+import type { Rule, Priority } from '@/lib/scoring-engine/types';
+import { RuleDetailsDialog } from './RuleDetailsDialog';
+import { PRIORITY_BUTTON_COLORS } from './constants';
+import { useFilteredAndSortedRules, groupRulesBy, type SortOption, type SortOrder } from './hooks/useFilteredAndSortedRules';
+import { useInstrumentationSpec } from './hooks/useInstrumentationSpec';
+import { useRuleState } from './hooks/useRuleState';
+import { RuleListItem } from './RuleListItem';
+import { FilterTabs } from './FilterTabs';
 
 interface ScoreDisplayProps {
   score: number;
@@ -174,86 +56,28 @@ export function InstrumentationCalculator({
   ScoreDisplayComponent,
   PriorityBreakdownComponent
 }: InstrumentationCalculatorProps) {
-  const [calculator, setCalculator] = useState<InstrumentationScoreCalculator | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState('all');
+  // Load specification and create calculator
+  const { calculator, loading, error, retry } = useInstrumentationSpec();
+
+  // Manage rule state and scoring
+  const { enabledRules, scoreResult, toggleRule } = useRuleState(calculator);
+
+  // UI state
+  const [activeFilter, setActiveFilter] = useState<Priority | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [signalFilter, setSignalFilter] = useState<"all" | "resources" | "spans" | "metrics" | "logs" | "sdk">("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const [enabledRules, setEnabledRules] = useState<Set<string>>(new Set());
-  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
 
   // Modal state for rule details
-  const [selectedRule, setSelectedRule] = useState<SpecRule | null>(null);
+  const [selectedRule, setSelectedRule] = useState<Rule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Load spec from remote repository
-  useEffect(() => {
-    const loadSpec = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const spec = await loadOfficialSpec();
-        const calc = new InstrumentationScoreCalculator(spec);
-        setCalculator(calc);
-
-        // Initialize enabled rules
-        const initialEnabled = new Set<string>();
-        calc.getAllRules().forEach(rule => {
-          if (calc.isRuleSatisfied(rule.id)) {
-            initialEnabled.add(rule.id);
-          }
-        });
-        setEnabledRules(initialEnabled);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load specification');
-        console.error('Error loading spec:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSpec();
-  }, []);
-
-  // Update calculator state and score when enabled rules change
-  useEffect(() => {
-    if (!calculator) return;
-
-    calculator.setAllRulesViolated();
-    enabledRules.forEach(ruleId => calculator.setRuleSatisfied(ruleId));
-    const result = calculator.calculateScore();
-    setScoreResult(result);
-  }, [calculator, enabledRules]);
-
-  // Pre-calculate all memoized values to avoid hooks order violations
-  const priorityOrder = { critical: 0, important: 1, normal: 2, low: 3 };
-  const priorityColors = {
-    critical: "bg-critical hover:bg-critical/90",
-    important: "bg-important hover:bg-important/90",
-    normal: "bg-normal hover:bg-normal/90",
-    low: "bg-low hover:bg-low/90"
-  };
-
-  // Convert spec rules to UI format
+  // Get all rules from calculator
   const rules: Rule[] = useMemo(() => {
-    if (!calculator || !scoreResult) return [];
-
-    return calculator.getAllRules().map((specRule: SpecRule) => ({
-      id: specRule.id,
-      name: specRule.name,
-      description: specRule.rationale || 'No description available',
-      priority: specRule.priority,
-      category: specRule.group,
-      signal: specRule.signal,
-      ruleCode: specRule.id,
-      impact: scoreResult.magnitudes.get(specRule.id) || 0,
-      enabled: enabledRules.has(specRule.id),
-      specRule
-    }));
-  }, [calculator, enabledRules, scoreResult]);
+    if (!calculator) return [];
+    return calculator.getAllRules();
+  }, [calculator]);
 
   // Calculate scores and stats
   const stats = useMemo(() => {
@@ -272,7 +96,7 @@ export function InstrumentationCalculator({
       magnitudes: new Map(),
     };
 
-    const enabledRulesList = rules.filter(rule => rule.enabled);
+    const enabledRulesList = rules.filter(rule => enabledRules.has(rule.id));
 
     const priorityBreakdown = {
       critical: { count: 0, points: 0, maxPoints: 0 },
@@ -315,56 +139,21 @@ export function InstrumentationCalculator({
     };
   }, [rules, calculator, enabledRules, scoreResult]);
 
-  // Filter and sort rules
-  const filteredRules = useMemo(() => {
-    const filtered = rules.filter(rule => {
-      const matchesSearch = searchQuery === "" ||
-        rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rule.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rule.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rule.ruleCode.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter and sort rules using custom hook
+  const filteredRules = useFilteredAndSortedRules(rules, {
+    searchQuery,
+    priorityFilter: activeFilter,
+    signalFilter,
+    sortBy,
+    sortOrder,
+    searchFields: ['rationale', 'group', 'id']
+  });
 
-      const matchesPriority = activeFilter === "all" || rule.priority === activeFilter;
-      const matchesSignal = signalFilter === "all" || rule.signal === signalFilter;
-
-      return matchesSearch && matchesPriority && matchesSignal;
-    });
-
-    // Sort the filtered rules
-    filtered.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortBy) {
-        case "priority":
-          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
-          break;
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "category":
-          comparison = a.category.localeCompare(b.category);
-          break;
-      }
-
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [rules, activeFilter, searchQuery, signalFilter, sortBy, sortOrder, priorityOrder]);
-
-  // Group filtered rules by category
-  const rulesByCategory = useMemo(() => {
-    const groups: Record<string, Rule[]> = {};
-
-    filteredRules.forEach(rule => {
-      if (!groups[rule.category]) {
-        groups[rule.category] = [];
-      }
-      groups[rule.category].push(rule);
-    });
-
-    return groups;
-  }, [filteredRules]);
+  // Group filtered rules by group
+  const rulesByGroup = useMemo(
+    () => groupRulesBy(filteredRules, 'group'),
+    [filteredRules]
+  );
 
   // Early returns after all hooks are defined
   if (loading) {
@@ -385,7 +174,7 @@ export function InstrumentationCalculator({
           <p className="text-red-600 mb-4">Error loading specification</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <Button
-            onClick={() => window.location.reload()}
+            onClick={retry}
             variant="outline"
             className="mt-4"
           >
@@ -396,21 +185,7 @@ export function InstrumentationCalculator({
     );
   }
 
-  const specInfo = calculator.getSpecInfo();
-
-  const handleRuleToggle = (ruleId: string) => {
-    setEnabledRules(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(ruleId)) {
-        newSet.delete(ruleId);
-      } else {
-        newSet.add(ruleId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleShowRuleDetails = (rule: SpecRule) => {
+  const handleShowRuleDetails = (rule: Rule) => {
     setSelectedRule(rule);
     setIsDialogOpen(true);
   };
@@ -508,7 +283,7 @@ export function InstrumentationCalculator({
                       activeFilter={activeFilter}
                       setActiveFilter={setActiveFilter}
                       ruleCounts={stats.ruleCounts}
-                      priorityColors={priorityColors}
+                      priorityColors={PRIORITY_BUTTON_COLORS}
                     />
                   </div>
 
@@ -521,7 +296,7 @@ export function InstrumentationCalculator({
                       <SelectContent>
                         <SelectItem value="priority">Priority</SelectItem>
                         <SelectItem value="name">Name</SelectItem>
-                        <SelectItem value="category">Category</SelectItem>
+                        <SelectItem value="group">Group</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
@@ -537,23 +312,35 @@ export function InstrumentationCalculator({
                 </div>
               </div>
 
-              {/* Rules by Category */}
+              {/* Rules by Group */}
               <div className="space-y-6">
-                {Object.entries(rulesByCategory).map(([category, categoryRules]) => (
-                  <div key={category} className="space-y-4">
+                {Object.entries(rulesByGroup).map(([group, groupRules]) => (
+                  <div key={group} className="space-y-4">
                     <h3 className="text-lg font-semibold text-foreground capitalize">
-                      {category} ({categoryRules.length})
+                      {group} ({groupRules.length})
                     </h3>
                     <div className="space-y-3">
-                      {categoryRules.map(rule => (
-                        <RuleItem
-                          key={rule.id}
-                          rule={rule}
-                          priorityColors={priorityColors}
-                          onShowRuleDetails={handleShowRuleDetails}
-                          onRuleToggle={handleRuleToggle}
-                        />
-                      ))}
+                      {groupRules.map(rule => {
+                        const isEnabled = enabledRules.has(rule.id);
+                        const impact = stats.magnitudes.get(rule.id) || 0;
+                        return (
+                          <RuleListItem
+                            key={rule.id}
+                            rule={{ ...rule, enabled: isEnabled }}
+                            onToggle={toggleRule}
+                            onShowDetails={handleShowRuleDetails}
+                            impact={impact}
+                            metadata={{
+                              category: rule.group,
+                              ruleCode: rule.id,
+                              description: rule.rationale,
+                              specUrl: rule.specUrl
+                            }}
+                            variant="card"
+                            priorityColors={PRIORITY_BUTTON_COLORS}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -578,5 +365,3 @@ export function InstrumentationCalculator({
     </div>
   );
 }
-
-export default InstrumentationCalculator;
