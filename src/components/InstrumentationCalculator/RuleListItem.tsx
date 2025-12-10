@@ -1,6 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
 import { PRIORITY_BUTTON_COLORS } from './constants';
@@ -94,7 +95,6 @@ export const RuleListItem = React.memo(<T extends BaseRule>({
 }: RuleListItemProps<T>) => {
   const isEnabled = rule.enabled ?? false;
   const showProgressBar = variant === 'compact' && maxImpact !== undefined;
-  const showStatusDot = variant === 'card';
   const clickable = !!onToggle;
 
   const handleClick = () => {
@@ -112,14 +112,21 @@ export const RuleListItem = React.memo(<T extends BaseRule>({
   if (variant === 'card') {
     return (
       <div
-        className={`flex items-center justify-between p-4 bg-card rounded-lg border border-border/50 hover:border-border hover:shadow-sm transition-all border-l-4 ${
+        className={`flex items-center gap-4 p-4 bg-card rounded-lg border border-border/50 hover:border-border hover:shadow-sm transition-all ${
           clickable ? 'cursor-pointer' : ''
-        } ${
-          isEnabled ? 'border-l-green-500 hover:border-l-green-600' : 'border-l-red-500 hover:border-l-red-600'
         }`}
         onClick={handleClick}
-        title={clickable ? `Click to ${isEnabled ? 'disable' : 'enable'} this rule` : undefined}
+        title={clickable ? `Click to ${isEnabled ? 'mark as failing' : 'mark as passing'}` : undefined}
       >
+        {/* Checkbox */}
+        {clickable && (
+          <Checkbox
+            checked={isEnabled}
+            className="flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+
         <div className="flex-1 space-y-2">
           {/* Title row */}
           <div className="flex items-center space-x-3">
@@ -135,9 +142,6 @@ export const RuleListItem = React.memo(<T extends BaseRule>({
 
           {/* Metadata row */}
           <div className="flex items-center space-x-3">
-            {showStatusDot && (
-              <div className={`w-3 h-3 rounded-full ${isEnabled ? 'bg-green-500' : 'bg-red-500'} flex-shrink-0`} />
-            )}
             <Badge className={`${priorityColors[rule.priority]} text-white border border-black/60 text-xs px-2 py-1`}>
               {rule.priority}
             </Badge>
