@@ -124,6 +124,7 @@ export const RuleListItem = React.memo(<T extends BaseRule>({
             checked={isEnabled}
             className="flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
+            onCheckedChange={() => onToggle?.(rule.id)}
           />
         )}
 
