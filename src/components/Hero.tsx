@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Activity, BarChart3 } from "lucide-react";
+import { ArrowRight, Activity, BarChart3, Calculator } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Hero = () => {
   return (
@@ -39,6 +40,23 @@ export const Hero = () => {
               <span className="text-green-400 font-mono font-bold">100</span>
               <span className="text-slate-400">Excellent</span>
             </div>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link to="/calculator">
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg">
+                <Calculator className="w-5 h-5 mr-2" />
+                Try Calculator
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" className="border-slate-600 text-white hover:bg-slate-800 px-8 py-4 text-lg" asChild>
+              <a href="https://github.com/instrumentation-score/spec" target="_blank" rel="noopener noreferrer">
+                <Activity className="w-5 h-5 mr-2" />
+                View Specification
+              </a>
+            </Button>
           </div>
 
         </div>
